@@ -1,7 +1,16 @@
 package main
 
-import "phillipp.io/toggl-cli/cmd"
+import (
+	"os"
+
+	"phillipp.io/toggl-cli/cmd"
+)
 
 func main() {
-	cmd.Execute()
+	rootCmd := cmd.NewCmdRoot()
+	err := rootCmd.Execute()
+	if err != nil {
+		os.Exit(1)
+	}
+	os.Exit(0)
 }

@@ -3,27 +3,24 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"phillipp.io/toggl-cli/cmd/track"
+	"phillipp.io/toggl-cli/cmd/times"
 )
 
-var (
-	// Used for flags.
-	cfgFile     string
-	userLicense string
-
-	rootCmd = &cobra.Command{
-		Use:   "track",
-		Short: "",
-		Long:  ``,
+func NewCmdRoot() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "tgl <command> <subcommand> [flags]",
+		Short: "Toggl Tack CLI",
+		Long:  `Work with the Toggl Track API from the command line`,
 	}
-)
 
-// Execute executes the root command.
-func Execute() error {
-	return rootCmd.Execute()
+	cmd.AddCommand(times.NewCmdTimes())
+
+	initViper()
+
+	return cmd
 }
 
-func init() {
+func initViper() {
 	// cobra.OnInitialize(initConfig)
 
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cobra.yaml)")
@@ -35,7 +32,6 @@ func init() {
 	// viper.SetDefault("author", "NAME HERE <EMAIL ADDRESS>")
 	// viper.SetDefault("license", "apache")
 
-	rootCmd.AddCommand(track.DownloadCmd)
 }
 
 // func initConfig() {
