@@ -124,9 +124,6 @@ func timesRun(opts *TimesOpts) error {
 
 	fmt.Printf("Time Range: %s - %s\n", earliestEntry.TimeEntry.Start.Format("2006-01-02"), latestEntry.TimeEntry.Start.Format("2006-01-02"))
 
-	// print entries using go-pretty as a table
-	t := table.NewWriter()
-
 	// group by description
 	aggregated := map[string]time.Duration{}
 	for _, eentry := range enrichedEntries {
@@ -137,18 +134,24 @@ func timesRun(opts *TimesOpts) error {
 		key := fmt.Sprintf("%s / %s / %s", client.Name, project.Name, group)
 		aggregated[key] += time.Duration(entry.Duration) * time.Second
 	}
+
 	totalDuration = time.Duration(0)
 	for _, duration := range aggregated {
 		totalDuration += duration
 	}
 
-	t = table.NewWriter()
+	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	t.AppendHeader(table.Row{"Client/Project/Description", "Duration"})
 	for key, duration := range aggregated {
 		t.AppendRow(table.Row{key, duration})
 	}
 	t.AppendFooter(table.Row{"Total", totalDuration})
+
+	// TODO add sorting, this is not working properly
+	t.SortBy([]table.SortBy{
+		{Name: "Duration", Mode: table.Asc},
+	})
 	t.Render()
 
 	return nil
