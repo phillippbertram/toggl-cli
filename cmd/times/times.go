@@ -13,9 +13,9 @@ import (
 )
 
 type EnrichedTimeEntry struct {
-	TimeEntry api.TimeEntry
-	Project   api.Project
-	Client    api.Client
+	TimeEntry api.TimeEntryDto
+	Project   api.ProjectDto
+	Client    api.ClientDto
 }
 
 // Define the API token flag
@@ -79,8 +79,8 @@ func timesRun(opts *TimesOpts) error {
 
 	// entries = api.FilterEntriesForWorkspace(entries, opts.workspaceId)
 
-	projects := []api.Project{}
-	clients := []api.Client{}
+	projects := []api.ProjectDto{}
+	clients := []api.ClientDto{}
 
 	enrichedEntries := []EnrichedTimeEntry{}
 	for _, entry := range entries {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"phillipp.io/toggl-cli/internal/utils"
 )
 
 type Api struct {
@@ -32,16 +33,16 @@ func NewApi(opts ApiOpts) *Api {
 	}
 }
 
-func (a *Api) GetProjectById(workspaceId int, projectId *int) (*Project, error) {
-	project := &Project{}
+func (a *Api) GetProjectById(workspaceId int, projectId *int) (*ProjectDto, error) {
+	project := &ProjectDto{}
 	_, err := a.httpClient.R().
 		SetResult(project).
 		Get(fmt.Sprintf("/workspaces/%d/projects/%d", workspaceId, *projectId))
 	return project, err
 }
 
-func (a *Api) GetClientById(workspaceId int, clientId *int) (*Client, error) {
-	resp := &Client{}
+func (a *Api) GetClientById(workspaceId int, clientId *int) (*ClientDto, error) {
+	resp := &ClientDto{}
 	_, err := a.httpClient.R().
 		SetResult(resp).
 		Get(fmt.Sprintf("/workspaces/%d/clients/%d", workspaceId, *clientId))
@@ -62,7 +63,7 @@ type GetTimeEntriesOpts struct {
 }
 
 // https://developers.track.toggl.com/docs/api/time_entries
-func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntry, error) {
+func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntryDto, error) {
 
 	q := map[string]string{}
 
@@ -72,12 +73,12 @@ func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntry, error) {
 
 	start, err := time.Parse("2006-01-02", *opts.StartDate)
 	if err != nil {
-		start = GetFirstDayOfMonth()
+		start = utils.GetFirstDayOfMonth()
 	}
 
 	end, err := time.Parse("2006-01-02", *opts.EndDate)
 	if err != nil {
-		end = GetLastDayOfMonth()
+		end = utils.GetLastDayOfMonth()
 	}
 
 	if opts.Before != nil {
@@ -89,7 +90,7 @@ func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntry, error) {
 
 	log.Printf("Query: %+v\n", q)
 
-	entries := &[]TimeEntry{}
+	entries := &[]TimeEntryDto{}
 	_, err = a.httpClient.R().
 		SetHeader("Accept", "application/json").
 		SetQueryParams(q).

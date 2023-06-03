@@ -2,7 +2,7 @@ package api
 
 import "time"
 
-type Project struct {
+type ProjectDto struct {
 	// Project ID
 	ID int `json:"id"`
 
@@ -13,7 +13,7 @@ type Project struct {
 	ClientId *int `json:"client_id"`
 }
 
-type Client struct {
+type ClientDto struct {
 	// Client ID
 	ID int `json:"id"`
 
@@ -21,7 +21,7 @@ type Client struct {
 	Name string `json:"name"`
 }
 
-type TimeEntry struct {
+type TimeEntryDto struct {
 
 	// Time Entry ID
 	ID int `json:"id"`

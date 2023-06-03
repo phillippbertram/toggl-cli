@@ -1,10 +1,6 @@
 package api
 
-import (
-	"time"
-)
-
-func ContainsProject(projects []Project, projectId *int) *Project {
+func ContainsProject(projects []ProjectDto, projectId *int) *ProjectDto {
 	if projectId == nil {
 		return nil
 	}
@@ -16,7 +12,7 @@ func ContainsProject(projects []Project, projectId *int) *Project {
 	return nil
 }
 
-func ContainsClient(clients []Client, clientId *int) *Client {
+func ContainsClient(clients []ClientDto, clientId *int) *ClientDto {
 	if clientId == nil {
 		return nil
 	}
@@ -28,24 +24,12 @@ func ContainsClient(clients []Client, clientId *int) *Client {
 	return nil
 }
 
-func FilterEntriesForWorkspace(entries []TimeEntry, workspaceId int) []TimeEntry {
-	filtered := []TimeEntry{}
+func FilterEntriesForWorkspace(entries []TimeEntryDto, workspaceId int) []TimeEntryDto {
+	filtered := []TimeEntryDto{}
 	for _, entry := range entries {
 		if entry.WorkspaceId == workspaceId {
 			filtered = append(filtered, entry)
 		}
 	}
 	return filtered
-}
-
-func GetFirstDayOfMonth() time.Time {
-	now := time.Now()
-	year, month, _ := now.Date()
-	return time.Date(year, month, 1, 0, 0, 0, 0, now.Location())
-}
-
-func GetLastDayOfMonth() time.Time {
-	now := time.Now()
-	year, month, _ := now.Date()
-	return time.Date(year, month+1, 0, 0, 0, 0, 0, now.Location())
 }
