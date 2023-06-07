@@ -1,5 +1,12 @@
 # toggl-cli
 
+## Development
+
+```
+$ make build
+$ go run
+```
+
 ## Usage
 
 ```
