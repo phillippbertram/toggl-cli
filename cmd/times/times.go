@@ -88,6 +88,7 @@ func timesRun(opts *TimesOpts) error {
 		// get project
 		project := api.ContainsProject(projects, entry.ProjectId)
 		if project == nil {
+
 			project, err = opts.api.GetProjectById(entry.WorkspaceId, entry.ProjectId)
 
 			if err != nil {
@@ -102,7 +103,7 @@ func timesRun(opts *TimesOpts) error {
 			// fmt.Printf("Downloading client: %d\n", *project.ClientId)
 			client, err = opts.api.GetClientById(entry.WorkspaceId, project.ClientId)
 			if err != nil {
-				// log.Fatalf("Failed to get client: %v\n", err)
+				log.Fatalf("Failed to get client: %v\n", err)
 			}
 			clients = append(clients, *client)
 		}
@@ -112,6 +113,14 @@ func timesRun(opts *TimesOpts) error {
 			Project:   *project,
 			Client:    *client,
 		})
+	}
+
+	// filter running entries to prevent wrong aggregation
+	enrichedEntries = ignoreRunningEntries(enrichedEntries)
+
+	// log entries
+	for _, entry := range enrichedEntries {
+		fmt.Printf("%s - %s - %s - %s - %s\n", entry.TimeEntry.Start.Format("2006-01-02"), entry.Client.Name, entry.Project.Name, *entry.TimeEntry.Description, entry.TimeEntry.Duration)
 	}
 
 	totalDuration := time.Duration(0)
@@ -175,4 +184,14 @@ func getLatestEntry(entries []EnrichedTimeEntry) EnrichedTimeEntry {
 		}
 	}
 	return latestEntry
+}
+
+func ignoreRunningEntries(entries []EnrichedTimeEntry) []EnrichedTimeEntry {
+	filtered := []EnrichedTimeEntry{}
+	for _, entry := range entries {
+		if entry.TimeEntry.Duration >= 0 {
+			filtered = append(filtered, entry)
+		}
+	}
+	return filtered
 }
