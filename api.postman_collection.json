@@ -1,0 +1,69 @@
+{
+	"info": {
+		"_postman_id": "c1b852fd-8ba4-4e13-bd79-99017d3a00a0",
+		"name": "Toggl Track API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "136128"
+	},
+	"item": [
+		{
+			"name": "Get Time Entries",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://api.track.toggl.com/api/v9/me/time_entries",
+					"protocol": "https",
+					"host": [
+						"api",
+						"track",
+						"toggl",
+						"com"
+					],
+					"path": [
+						"api",
+						"v9",
+						"me",
+						"time_entries"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "basic",
+		"basic": [
+			{
+				"key": "password",
+				"value": "api_token",
+				"type": "string"
+			},
+			{
+				"key": "username",
+				"value": "{{API_TOKEN}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
