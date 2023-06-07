@@ -12,6 +12,11 @@ import (
 	"phillipp.io/toggl-cli/internal/api"
 )
 
+// convert duration into decimal hours
+func durationToHours(duration time.Duration) float64 {
+	return float64(duration) / float64(time.Hour)
+}
+
 type EnrichedTimeEntry struct {
 	TimeEntry api.TimeEntryDto
 	Project   api.ProjectDto
@@ -118,11 +123,6 @@ func timesRun(opts *TimesOpts) error {
 	// filter running entries to prevent wrong aggregation
 	enrichedEntries = ignoreRunningEntries(enrichedEntries)
 
-	// log entries
-	for _, entry := range enrichedEntries {
-		fmt.Printf("%s - %s - %s - %s - %s\n", entry.TimeEntry.Start.Format("2006-01-02"), entry.Client.Name, entry.Project.Name, *entry.TimeEntry.Description, entry.TimeEntry.Duration)
-	}
-
 	totalDuration := time.Duration(0)
 	for _, entry := range enrichedEntries {
 		totalDuration += time.Duration(entry.TimeEntry.Duration) * time.Second
@@ -151,9 +151,10 @@ func timesRun(opts *TimesOpts) error {
 
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Client/Project/Description", "Duration"})
+	t.AppendHeader(table.Row{"Client/Project/Description", "Duration (hours)"})
 	for key, duration := range aggregated {
-		t.AppendRow(table.Row{key, duration})
+		durationInHours := durationToHours(duration)
+		t.AppendRow(table.Row{key, fmt.Sprintf("%.2f", durationInHours)})
 	}
 	t.AppendFooter(table.Row{"Total", totalDuration})
 
