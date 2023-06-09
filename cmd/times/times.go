@@ -17,6 +17,10 @@ func durationToHours(duration time.Duration) float64 {
 	return float64(duration) / float64(time.Hour)
 }
 
+func formatDuration(duration time.Duration) string {
+	return fmt.Sprintf("%.2f", durationToHours(duration))
+}
+
 type EnrichedTimeEntry struct {
 	TimeEntry api.TimeEntryDto
 	Project   api.ProjectDto
@@ -153,14 +157,13 @@ func timesRun(opts *TimesOpts) error {
 	t.SetOutputMirror(os.Stdout)
 	t.AppendHeader(table.Row{"Client/Project/Description", "Duration (hours)"})
 	for key, duration := range aggregated {
-		durationInHours := durationToHours(duration)
-		t.AppendRow(table.Row{key, fmt.Sprintf("%.2f", durationInHours)})
+		t.AppendRow(table.Row{key, formatDuration(duration)})
 	}
-	t.AppendFooter(table.Row{"Total", totalDuration})
+	t.AppendFooter(table.Row{"Total", formatDuration(totalDuration)})
 
 	// TODO add sorting, this is not working properly
 	t.SortBy([]table.SortBy{
-		{Name: "Duration", Mode: table.Asc},
+		{Name: "Duration (hours)", Mode: table.Asc},
 	})
 	t.Render()
 
