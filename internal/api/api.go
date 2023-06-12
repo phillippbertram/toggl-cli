@@ -33,19 +33,19 @@ func NewApi(opts ApiOpts) *Api {
 	}
 }
 
-func (a *Api) GetProjectById(workspaceId int, projectId *int) (*ProjectDto, error) {
+func (a *Api) GetProjectById(workspaceId int, projectId int) (*ProjectDto, error) {
 	project := &ProjectDto{}
 	_, err := a.httpClient.R().
 		SetResult(project).
-		Get(fmt.Sprintf("/workspaces/%d/projects/%d", workspaceId, *projectId))
+		Get(fmt.Sprintf("/workspaces/%d/projects/%d", workspaceId, projectId))
 	return project, err
 }
 
-func (a *Api) GetClientById(workspaceId int, clientId *int) (*ClientDto, error) {
+func (a *Api) GetClientById(workspaceId int, clientId int) (*ClientDto, error) {
 	resp := &ClientDto{}
 	_, err := a.httpClient.R().
 		SetResult(resp).
-		Get(fmt.Sprintf("/workspaces/%d/clients/%d", workspaceId, *clientId))
+		Get(fmt.Sprintf("/workspaces/%d/clients/%d", workspaceId, clientId))
 	return resp, err
 }
 
