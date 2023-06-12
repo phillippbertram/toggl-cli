@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
+	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/fatih/color v1.15.0
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/jedib0t/go-pretty v4.3.0+incompatible

@@ -101,8 +101,10 @@ func checkForStartDate(opts *TimesOpts) {
 		return
 	}
 
+	startOfMonth := utils.GetStartOfMonth().Local().Format("2006-01-02")
+
 	prompt := &survey.Input{
-		Message: "Please enter the start date (YYYY-MM-DD) [start of month]:",
+		Message: fmt.Sprintf("Please enter the start date (YYYY-MM-DD) [%s]:", startOfMonth),
 	}
 	err := survey.AskOne(prompt, &opts.startDate)
 	if err != nil {
@@ -112,7 +114,7 @@ func checkForStartDate(opts *TimesOpts) {
 	}
 
 	if opts.startDate == "" {
-		opts.startDate = utils.GetFirstDayOfMonth().Format("2006-01-02")
+		opts.startDate = startOfMonth
 	}
 }
 
@@ -121,8 +123,10 @@ func checkForEndDate(opts *TimesOpts) {
 		return
 	}
 
+	today := utils.GetEndOfTodayDay().Local().Format("2006-01-02T15:04:05")
+
 	prompt := &survey.Input{
-		Message: "Please enter the end date (YYYY-MM-DD) [today]:",
+		Message: fmt.Sprintf("Please enter the end date (YYYY-MM-DD) [%s]:", today),
 	}
 	err := survey.AskOne(prompt, &opts.endDate)
 	if err != nil {
@@ -132,7 +136,7 @@ func checkForEndDate(opts *TimesOpts) {
 	}
 
 	if opts.endDate == "" {
-		opts.endDate = utils.GetEndOfTodayDay().Local().Format("2006-01-02T15:04:05")
+		opts.endDate = today
 	}
 }
 

@@ -72,7 +72,7 @@ func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntryDto, error) {
 
 	start, err := time.Parse("2006-01-02", *opts.StartDate)
 	if err != nil {
-		start = utils.GetFirstDayOfMonth()
+		start = utils.GetStartOfMonth()
 	}
 
 	end, err := time.Parse("2006-01-02", *opts.EndDate)

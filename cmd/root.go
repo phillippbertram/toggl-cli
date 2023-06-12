@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/MakeNowJust/heredoc"
 	"phillipp.io/toggl-cli/cmd/times"
 )
 
@@ -10,7 +11,7 @@ func NewCmdRoot() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tgl <command> <subcommand> [flags]",
 		Short: "Toggl Tack CLI",
-		Long:  `Work with the Toggl Track API from the command line`,
+		Long:  heredoc.Doc(`Work with the Toggl Track API from the command line`),
 	}
 
 	cmd.AddCommand(times.NewCmdTimes())
