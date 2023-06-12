@@ -123,3 +123,5 @@ dist/
 
 
 .env
+.tgl*
+!.tgl.example.yml

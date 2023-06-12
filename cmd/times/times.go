@@ -7,9 +7,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/AlecAivazis/survey/v2/terminal"
+	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
+	"phillipp.io/toggl-cli/internal/utils"
 )
 
 // convert duration into decimal hours
@@ -29,32 +33,33 @@ type EnrichedTimeEntry struct {
 
 // Define the API token flag
 type TimesOpts struct {
-	api *api.Api
+	api         *api.Api
+	interactive bool
+	apiToken    string
+	startDate   string
+	endDate     string
+}
 
-	apiToken string
-	// clientName  string
-	// workspaceId int
-	startDate string
-	endDate   string
+func (opts *TimesOpts) print() {
+	fmt.Printf("API Token: %s\n", opts.apiToken)
+	fmt.Printf("Start Date: %s\n", opts.startDate)
+	fmt.Printf("End Date: %s\n", opts.endDate)
 }
 
 func NewCmdTimes() *cobra.Command {
 
-	opts := TimesOpts{}
+	opts := TimesOpts{
+		interactive: false,
+	}
 
 	cmd := &cobra.Command{
 		Use:   "times",
 		Short: "Download time entries for a client and time range",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if opts.apiToken == "" {
-				token := os.Getenv("TOGGL_API_TOKEN")
-				if token == "" {
-					return fmt.Errorf("No API token provided")
-				}
-				opts.apiToken = token
-			}
-
+			checkForApiToken(&opts)
+			checkForStartDate(&opts)
+			checkForEndDate(&opts)
 			opts.api = api.NewApi(api.ApiOpts{ApiToken: opts.apiToken})
 
 			return timesRun(&opts)
@@ -63,30 +68,80 @@ func NewCmdTimes() *cobra.Command {
 
 	// Add the API token flag to the command
 	cmd.Flags().StringVarP(&opts.apiToken, "token", "t", "", "Toggl Track API token")
-	// cmd.MarkFlagRequired("token")
-
-	// Add the client name flag to the command
-	// cmd.Flags().StringVarP(&opts.clientName, "client", "c", "", "Client name")
-	// cmd.MarkFlagRequired("client") // Mark the client flag as required
-
-	// Add the wip name flag to the command
-	// cmd.Flags().IntVarP(&opts.workspaceId, "wip", "w", 0, "Client name")
-	// cmd.MarkFlagRequired("wip") // Mark the wip flag as required
-
-	// Add the start date flag to the command
 	cmd.Flags().StringVarP(&opts.startDate, "start", "s", "", "Start date (YYYY-MM-DD)")
-
-	// Add the end date flag to the command
 	cmd.Flags().StringVarP(&opts.endDate, "end", "e", "", "End date (YYYY-MM-DD)")
 
 	return cmd
 }
 
+func checkForApiToken(opts *TimesOpts) {
+	if opts.apiToken != "" {
+		return
+	}
+
+	token := os.Getenv("TOGGL_API_TOKEN")
+	if token != "" {
+		opts.apiToken = token
+		return
+	}
+
+	prompt := &survey.Input{
+		Message: "Please enter your Toggl Track API token:",
+		Help:    "https://track.toggl.com/profile",
+	}
+	survey.AskOne(prompt, &opts.apiToken, survey.WithValidator(survey.Required))
+
+	if opts.apiToken == "" {
+		log.Fatalf("%s", color.RedString("No API token provided"))
+	}
+}
+
+func checkForStartDate(opts *TimesOpts) {
+	if opts.startDate != "" {
+		return
+	}
+
+	prompt := &survey.Input{
+		Message: "Please enter the start date (YYYY-MM-DD) [start of month]:",
+	}
+	err := survey.AskOne(prompt, &opts.startDate)
+	if err != nil {
+		if err == terminal.InterruptErr {
+			log.Fatal()
+		}
+	}
+
+	if opts.startDate == "" {
+		opts.startDate = utils.GetFirstDayOfMonth().Format("2006-01-02")
+	}
+}
+
+func checkForEndDate(opts *TimesOpts) {
+	if opts.endDate != "" {
+		return
+	}
+
+	prompt := &survey.Input{
+		Message: "Please enter the end date (YYYY-MM-DD) [today]:",
+	}
+	err := survey.AskOne(prompt, &opts.endDate)
+	if err != nil {
+		if err == terminal.InterruptErr {
+			log.Fatal()
+		}
+	}
+
+	if opts.endDate == "" {
+		opts.endDate = utils.GetEndOfTodayDay().Local().Format("2006-01-02T15:04:05")
+	}
+}
+
 // downloadTimeEntries is the function that executes when the download command is called
 func timesRun(opts *TimesOpts) error {
 
+	opts.print()
+
 	entries, err := opts.api.GetTimeEntries(&api.GetTimeEntriesOpts{
-		// WorkspaceId: opts.workspaceId,
 		StartDate: &opts.startDate,
 		EndDate:   &opts.endDate,
 	})
@@ -107,7 +162,8 @@ func timesRun(opts *TimesOpts) error {
 	earliestEntry := getEarliestEntry(enrichedEntries)
 	latestEntry := getLatestEntry(enrichedEntries)
 
-	fmt.Printf("Time Range: %s - %s\n", earliestEntry.TimeEntry.Start.Format("2006-01-02"), latestEntry.TimeEntry.Start.Format("2006-01-02"))
+	timeRangeDays := utils.GetDaysBetween(earliestEntry.TimeEntry.Start, latestEntry.TimeEntry.Start)
+	fmt.Printf("Time Range: %s - %s (%d days)\n", earliestEntry.TimeEntry.Start.Format("2006-01-02"), latestEntry.TimeEntry.Start.Format("2006-01-02"), len(timeRangeDays))
 
 	// group by description
 	aggregated := map[string]time.Duration{}

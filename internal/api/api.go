@@ -4,7 +4,6 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -87,8 +86,6 @@ func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntryDto, error) {
 
 	q["start_date"] = start.Format("2006-01-02")
 	q["end_date"] = end.Format("2006-01-02")
-
-	log.Printf("Query: %+v\n", q)
 
 	entries := &[]TimeEntryDto{}
 	_, err = a.httpClient.R().
