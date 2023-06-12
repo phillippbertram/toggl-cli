@@ -1,6 +1,6 @@
 package api
 
-func ContainsProject(projects []ProjectDto, projectId *int) *ProjectDto {
+func GetProjectById(projects []ProjectDto, projectId *int) *ProjectDto {
 	if projectId == nil {
 		return nil
 	}
@@ -12,7 +12,7 @@ func ContainsProject(projects []ProjectDto, projectId *int) *ProjectDto {
 	return nil
 }
 
-func ContainsClient(clients []ClientDto, clientId *int) *ClientDto {
+func GetClientById(clients []ClientDto, clientId *int) *ClientDto {
 	if clientId == nil {
 		return nil
 	}

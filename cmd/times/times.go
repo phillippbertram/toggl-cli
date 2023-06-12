@@ -23,8 +23,8 @@ func formatDuration(duration time.Duration) string {
 
 type EnrichedTimeEntry struct {
 	TimeEntry api.TimeEntryDto
-	Project   api.ProjectDto
-	Client    api.ClientDto
+	Project   *api.ProjectDto
+	Client    *api.ClientDto
 }
 
 // Define the API token flag
@@ -94,46 +94,10 @@ func timesRun(opts *TimesOpts) error {
 		log.Fatalf("Failed to download time entries: %v", err)
 	}
 
-	// entries = api.FilterEntriesForWorkspace(entries, opts.workspaceId)
-
-	projects := []api.ProjectDto{}
-	clients := []api.ClientDto{}
-
-	enrichedEntries := []EnrichedTimeEntry{}
-	for _, entry := range entries {
-
-		// get project
-		project := api.ContainsProject(projects, entry.ProjectId)
-		if project == nil {
-
-			project, err = opts.api.GetProjectById(entry.WorkspaceId, entry.ProjectId)
-
-			if err != nil {
-				log.Fatalf("Failed to get project: %v", err)
-			}
-			projects = append(projects, *project)
-		}
-
-		// get client
-		client := api.ContainsClient(clients, project.ClientId)
-		if client == nil {
-			// fmt.Printf("Downloading client: %d\n", *project.ClientId)
-			client, err = opts.api.GetClientById(entry.WorkspaceId, project.ClientId)
-			if err != nil {
-				log.Fatalf("Failed to get client: %v\n", err)
-			}
-			clients = append(clients, *client)
-		}
-
-		enrichedEntries = append(enrichedEntries, EnrichedTimeEntry{
-			TimeEntry: entry,
-			Project:   *project,
-			Client:    *client,
-		})
+	enrichedEntries, err := getEnrichedTimeEntries(entries, opts)
+	if err != nil {
+		log.Fatalf("failed to enrich time entries: %v", err)
 	}
-
-	// filter running entries to prevent wrong aggregation
-	enrichedEntries = ignoreRunningEntries(enrichedEntries)
 
 	totalDuration := time.Duration(0)
 	for _, entry := range enrichedEntries {
@@ -152,7 +116,25 @@ func timesRun(opts *TimesOpts) error {
 		project := eentry.Project
 		client := eentry.Client
 		group := strings.Split(*entry.Description, ":")[0]
-		key := fmt.Sprintf("%s / %s / %s", client.Name, project.Name, group)
+
+		if group == "" {
+			group = "<NO_DESCRIPTION>"
+		}
+
+		keys := []string{}
+		if client != nil {
+			keys = append(keys, client.Name)
+		} else {
+			keys = append(keys, "NO_CLIENT")
+		}
+		if project != nil {
+			keys = append(keys, project.Name)
+		} else {
+			keys = append(keys, "NO_PROJECT")
+		}
+		keys = append(keys, group)
+
+		key := strings.Join(keys, "/")
 		aggregated[key] += time.Duration(entry.Duration) * time.Second
 	}
 
@@ -176,6 +158,57 @@ func timesRun(opts *TimesOpts) error {
 	t.Render()
 
 	return nil
+}
+
+func getEnrichedTimeEntries(entries []api.TimeEntryDto, opts *TimesOpts) ([]EnrichedTimeEntry, error) {
+	projects := []api.ProjectDto{}
+	clients := []api.ClientDto{}
+
+	enrichedEntries := []EnrichedTimeEntry{}
+	for _, entry := range entries {
+
+		// read from cache
+		project := api.GetProjectById(projects, entry.ProjectId)
+		if project == nil && entry.ProjectId != nil {
+			// fetch from API
+			newProject, err := opts.api.GetProjectById(entry.WorkspaceId, *entry.ProjectId)
+			project = newProject
+			if err != nil {
+				log.Printf("Failed to get project: %v\n", err)
+			}
+			if project != nil {
+				projects = append(projects, *project)
+			}
+		}
+
+		var client *api.ClientDto
+		if project != nil {
+			// read from cache
+			client = api.GetClientById(clients, project.ClientId)
+			if client == nil && project.ClientId != nil {
+				// fetch from API
+				freshClient, err := opts.api.GetClientById(entry.WorkspaceId, *project.ClientId)
+				client = freshClient
+				if err != nil {
+					log.Printf("failed to get client: %v", err)
+				}
+				if client != nil {
+					clients = append(clients, *client)
+				} else {
+					log.Printf("client not found: %d", *project.ClientId)
+				}
+			}
+		}
+
+		enrichedEntries = append(enrichedEntries, EnrichedTimeEntry{
+			TimeEntry: entry,
+			Project:   project,
+			Client:    client,
+		})
+	}
+
+	enrichedEntries = ignoreRunningEntries(enrichedEntries)
+	return enrichedEntries, nil
 }
 
 func getEarliestEntry(entries []EnrichedTimeEntry) EnrichedTimeEntry {
