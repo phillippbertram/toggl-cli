@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jedib0t/go-pretty/table"
+	"phillipp.io/toggl-cli/internal/utils"
 )
 
 func GetProjectById(projects []ProjectDto, projectId *int) *ProjectDto {
@@ -52,31 +53,38 @@ func PrettyPrintTimeEntry(entry *TimeEntryDto) {
 		projectId = fmt.Sprintf("%d", *entry.ProjectId)
 	}
 
-	projectStop := ""
+	projectStop := "-"
 	if entry.Stop != nil {
-		projectStop = entry.Stop.Format("2006-01-02 15:04:05")
+		projectStop = entry.Stop.Format(utils.DATE_TIME_FORMAT)
 	}
 
-	description := ""
+	description := "-"
 	if entry.Description != nil {
 		description = *entry.Description
 	}
 
-	duration := (time.Duration(entry.Duration) * time.Second).String()
+	duration := time.Duration(entry.Duration) * time.Second
 	if entry.Duration == -1 {
-		duration = "running"
+		duration = time.Since(entry.Start)
+	}
+	duration = duration.Round(time.Second)
+
+	status := "running"
+	if entry.Stop != nil {
+		status = "stopped"
 	}
 
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"ID", "Description", "Project", "Start", "End", "Duration"})
+	t.AppendHeader(table.Row{"ID", "Description", "Project", "Start", "End", "Duration", "Status"})
 	t.AppendRow(table.Row{
 		entry.ID,
 		description,
 		projectId,
-		entry.Start.Format("2006-01-02 15:04:05"),
+		entry.Start.Format(utils.DATE_TIME_FORMAT),
 		projectStop,
 		duration,
+		status,
 	})
 	t.Render()
 }

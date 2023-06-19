@@ -8,6 +8,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	DATE_FORMAT      = time.TimeOnly
+	DATE_TIME_FORMAT = time.RFC3339
+)
+
 func GetStartOfMonth() time.Time {
 	now := time.Now()
 	year, month, _ := now.Date()

@@ -109,7 +109,7 @@ func interactiveCheckForStartDate(opts *TimesOpts) {
 		return
 	}
 
-	startOfMonth := utils.GetStartOfMonth().Local().Format("2006-01-02")
+	startOfMonth := utils.GetStartOfMonth().Local().Format(utils.DATE_FORMAT)
 
 	prompt := &survey.Input{
 		Message: fmt.Sprintf("Please enter the start date (YYYY-MM-DD) [%s]:", startOfMonth),
@@ -131,7 +131,7 @@ func interactiveCheckForEndDate(opts *TimesOpts) {
 		return
 	}
 
-	today := utils.GetEndOfTodayDay().Local().Format("2006-01-02T15:04:05")
+	today := utils.GetEndOfTodayDay().Local().Format(time.RFC3339)
 
 	prompt := &survey.Input{
 		Message: fmt.Sprintf("Please enter the end date (YYYY-MM-DD) [%s]:", today),
@@ -177,7 +177,7 @@ func timesRun(opts *TimesOpts) error {
 	latestEntry := getLatestEntry(enrichedEntries)
 
 	timeRangeDays := utils.GetDaysBetween(earliestEntry.TimeEntry.Start, latestEntry.TimeEntry.Start)
-	fmt.Printf("Time Entries Range: %s - %s (%d days)\n\n", earliestEntry.TimeEntry.Start.Format("2006-01-02"), latestEntry.TimeEntry.Start.Format("2006-01-02"), len(timeRangeDays))
+	fmt.Printf("Time Entries Range: %s - %s (%d days)\n\n", earliestEntry.TimeEntry.Start.Format(utils.DATE_FORMAT), latestEntry.TimeEntry.Start.Format(utils.DATE_FORMAT), len(timeRangeDays))
 
 	// group by description
 	aggregated := map[string]time.Duration{}

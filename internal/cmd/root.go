@@ -21,7 +21,6 @@ func NewCmdRoot() *cobra.Command {
 		Long:  `Work with the Toggl Track API from the command line`,
 	}
 
-	err := godotenv.Load()
 	_ = godotenv.Load()
 
 	initViper()
