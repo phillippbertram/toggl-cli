@@ -1,6 +1,12 @@
 package utils
 
-import "time"
+import (
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/spf13/cobra"
+)
 
 func GetStartOfMonth() time.Time {
 	now := time.Now()
@@ -29,4 +35,22 @@ func GetDaysBetween(start time.Time, end time.Time) []time.Time {
 		days = append(days, d)
 	}
 	return days
+}
+
+func GetApiToken(cmd *cobra.Command, bindToken *string) error {
+	token, err := cmd.Flags().GetString("token")
+	if err != nil {
+		return err
+	}
+
+	if token == "" {
+		token = os.Getenv("TOGGL_API_TOKEN")
+	}
+
+	if token == "" {
+		return fmt.Errorf("no API token provided")
+	}
+
+	*bindToken = token
+	return nil
 }

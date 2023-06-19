@@ -2,6 +2,14 @@ package api
 
 import "time"
 
+// https://developers.track.toggl.com/docs/api/me#get-me
+type UserDto struct {
+	ID                 int    `json:"id"`
+	Email              string `json:"email"`
+	FullName           string `json:"fullname"`
+	DefaultWorkspaceID int    `json:"default_workspace_id"`
+}
+
 type ProjectDto struct {
 	// Project ID
 	ID int `json:"id"`
@@ -45,8 +53,28 @@ type TimeEntryDto struct {
 	Start time.Time `json:"start"`
 
 	// Stop time in UTC, can be null if it's still running or created with "duration" and "duronly" fields
-	Stop *string `json:"stop"`
+	Stop *time.Time `json:"stop"`
 
 	// Tag names, null if tags were not provided or were later deleted
 	Tags []string `json:"tags"`
+}
+
+// https://developers.track.toggl.com/docs/api/time_entries#post-timeentries
+type CreateTypeEntryRequestDto struct {
+	ProjectID *int `json:"project_id"`
+
+	// Must be provided when creating a time entry and should identify the service/application used to create it
+	CreatedWith string `json:"created_with"`
+
+	// Start time in UTC, required for creation. Format: 2006-01-02T15:04:05Z
+	Start string `json:"start"`
+
+	// Workspace ID, required
+	WorkspaceID int `json:"workspace_id"`
+
+	// Time entry description, optional
+	Description string `json:"description"`
+
+	// Time entry duration. For running entries should be negative, preferable -1
+	Duration int `json:"duration"`
 }
