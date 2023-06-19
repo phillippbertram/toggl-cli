@@ -16,6 +16,8 @@ func NewCmdRoot() *cobra.Command {
 		Long:  `Work with the Toggl Track API from the command line`,
 	}
 
+	cmd.PersistentFlags().StringP("token", "t", "", "Toggl Track API token")
+
 	cmd.AddCommand(times.NewCmdTimes())
 	cmd.AddCommand(start.NewCmdStart())
 	cmd.AddCommand(stop.NewCmdStop())

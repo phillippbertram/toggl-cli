@@ -2,12 +2,12 @@ package start
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
+	"phillipp.io/toggl-cli/internal/utils"
 )
 
 // Define the API token flag
@@ -29,14 +29,11 @@ func NewCmdStart() *cobra.Command {
 		Use:   "start",
 		Short: "Start tracking time for a project",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			if opts.apiToken == "" {
-				token := os.Getenv("TOGGL_API_TOKEN")
-				if token == "" {
-					return fmt.Errorf("no API token provided")
-				}
-				opts.apiToken = token
+			token, err := utils.GetApiToken(cmd)
+			if err != nil {
+				return err
 			}
+			opts.apiToken = token
 
 			opts.api = api.NewApi(api.ApiOpts{ApiToken: opts.apiToken})
 
@@ -44,8 +41,6 @@ func NewCmdStart() *cobra.Command {
 		},
 	}
 
-	// TODO: make this a persistent flag
-	cmd.Flags().StringVar(&opts.apiToken, "token", "", "Toggl Track API token")
 	cmd.Flags().StringVarP(&opts.projectName, "project", "p", "", "Project Name to start tracking time for")
 	cmd.Flags().StringVarP(&opts.description, "description", "d", "", "Description of the time entry")
 	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Force the start of a new time entry")
