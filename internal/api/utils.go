@@ -1,5 +1,13 @@
 package api
 
+import (
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/jedib0t/go-pretty/table"
+)
+
 func GetProjectById(projects []ProjectDto, projectId *int) *ProjectDto {
 	if projectId == nil {
 		return nil
@@ -32,4 +40,43 @@ func FilterEntriesForWorkspace(entries []TimeEntryDto, workspaceId int) []TimeEn
 		}
 	}
 	return filtered
+}
+
+func PrettyPrintTimeEntry(entry *TimeEntryDto) {
+	if entry == nil {
+		return
+	}
+
+	projectId := ""
+	if entry.ProjectId != nil {
+		projectId = fmt.Sprintf("%d", *entry.ProjectId)
+	}
+
+	projectStop := ""
+	if entry.Stop != nil {
+		projectStop = entry.Stop.Format("2006-01-02 15:04:05")
+	}
+
+	description := ""
+	if entry.Description != nil {
+		description = *entry.Description
+	}
+
+	duration := (time.Duration(entry.Duration) * time.Second).String()
+	if entry.Duration == -1 {
+		duration = "running"
+	}
+
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"ID", "Description", "Project", "Start", "End", "Duration"})
+	t.AppendRow(table.Row{
+		entry.ID,
+		description,
+		projectId,
+		entry.Start.Format("2006-01-02 15:04:05"),
+		projectStop,
+		duration,
+	})
+	t.Render()
 }

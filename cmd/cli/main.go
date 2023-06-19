@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"phillipp.io/toggl-cli/cmd"
+	"phillipp.io/toggl-cli/internal/cmd"
 )
 
 func main() {

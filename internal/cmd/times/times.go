@@ -10,6 +10,7 @@ import (
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
+	"phillipp.io/toggl-cli/internal/utils"
 )
 
 // convert duration into decimal hours
@@ -46,24 +47,15 @@ func NewCmdTimes() *cobra.Command {
 		Use:   "times",
 		Short: "Download time entries for a client and time range",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			if opts.apiToken == "" {
-				token := os.Getenv("TOGGL_API_TOKEN")
-				if token == "" {
-					return fmt.Errorf("No API token provided")
-				}
-				opts.apiToken = token
+			err := utils.GetApiToken(cmd, &opts.apiToken)
+			if err != nil {
+				return err
 			}
-
 			opts.api = api.NewApi(api.ApiOpts{ApiToken: opts.apiToken})
 
 			return timesRun(&opts)
 		},
 	}
-
-	// Add the API token flag to the command
-	cmd.Flags().StringVarP(&opts.apiToken, "token", "t", "", "Toggl Track API token")
-	// cmd.MarkFlagRequired("token")
 
 	// Add the client name flag to the command
 	// cmd.Flags().StringVarP(&opts.clientName, "client", "c", "", "Client name")
