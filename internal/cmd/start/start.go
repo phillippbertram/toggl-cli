@@ -3,6 +3,7 @@ package start
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
@@ -12,7 +13,9 @@ import (
 type StartTrackingOpts struct {
 	api *api.Api
 
-	apiToken string
+	apiToken    string
+	projectName string
+	title       string
 }
 
 func NewCmdStart() *cobra.Command {
@@ -39,13 +42,38 @@ func NewCmdStart() *cobra.Command {
 	}
 
 	// TODO: make this a persistent flag
-	// Add the API token flag to the command
-	cmd.Flags().StringVarP(&opts.apiToken, "token", "t", "", "Toggl Track API token")
+	cmd.Flags().StringVar(&opts.apiToken, "token", "", "Toggl Track API token")
+	cmd.Flags().StringVarP(&opts.projectName, "project", "p", "", "Project Name to start tracking time for")
+	cmd.Flags().StringVarP(&opts.title, "title", "t", "", "Title of the time entry")
 
 	return cmd
 }
 
-// downloadTimeEntries is the function that executes when the download command is called
 func startTrackingRun(opts *StartTrackingOpts) error {
-	return nil
+
+	// TODO: get workspace ID and project ID
+	var workspaceID *int
+	var projectID *int
+
+	if workspaceID == nil {
+		user, err := opts.api.GetMe()
+		if err != nil {
+			return err
+		}
+		workspaceID = &user.DefaultWorkspaceID
+	}
+
+	now := time.Now()
+	startTime := now.Format("2006-01-02T15:04:05-07:00")
+
+	entry, err := opts.api.StartTimeEntry(&api.CreateTypeEntryRequestDto{
+		ProjectID:   projectID,
+		WorkspaceID: *workspaceID,
+		Start:       startTime,
+		Description: opts.title,
+		Duration:    -1, // -1 means the entry is still running
+	})
+
+	fmt.Printf("Started time entry %+v\n", entry)
+	return err
 }

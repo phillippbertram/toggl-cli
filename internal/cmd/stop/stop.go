@@ -45,7 +45,6 @@ func NewCmdStop() *cobra.Command {
 	return cmd
 }
 
-// downloadTimeEntries is the function that executes when the download command is called
 func stopTrackingRun(opts *StartTrackingOpts) error {
 	runningEntry, error := opts.api.GetRunningTimeEntry()
 	if error != nil || runningEntry == nil {
