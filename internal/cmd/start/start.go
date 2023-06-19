@@ -29,11 +29,10 @@ func NewCmdStart() *cobra.Command {
 		Use:   "start",
 		Short: "Start tracking time for a project",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := utils.GetApiToken(cmd)
+			err := utils.GetApiToken(cmd, &opts.apiToken)
 			if err != nil {
 				return err
 			}
-			opts.apiToken = token
 
 			opts.api = api.NewApi(api.ApiOpts{ApiToken: opts.apiToken})
 

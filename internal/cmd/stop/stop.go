@@ -2,10 +2,10 @@ package stop
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
+	"phillipp.io/toggl-cli/internal/utils"
 )
 
 // Define the API token flag
@@ -24,12 +24,9 @@ func NewCmdStop() *cobra.Command {
 		Short: "Stop tracking time for a project",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if opts.apiToken == "" {
-				token := os.Getenv("TOGGL_API_TOKEN")
-				if token == "" {
-					return fmt.Errorf("no API token provided")
-				}
-				opts.apiToken = token
+			err := utils.GetApiToken(cmd, &opts.apiToken)
+			if err != nil {
+				return err
 			}
 
 			opts.api = api.NewApi(api.ApiOpts{ApiToken: opts.apiToken})
@@ -37,10 +34,6 @@ func NewCmdStop() *cobra.Command {
 			return stopTrackingRun(&opts)
 		},
 	}
-
-	// TODO: make this a persistent flag
-	// Add the API token flag to the command
-	cmd.Flags().StringVarP(&opts.apiToken, "token", "t", "", "Toggl Track API token")
 
 	return cmd
 }

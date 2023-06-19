@@ -1,11 +1,9 @@
 package active
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
+	"phillipp.io/toggl-cli/internal/utils"
 )
 
 // Define the API token flag
@@ -24,12 +22,9 @@ func NewCmdActive() *cobra.Command {
 		Short: "Show the active time entry if there is one",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if opts.apiToken == "" {
-				token := os.Getenv("TOGGL_API_TOKEN")
-				if token == "" {
-					return fmt.Errorf("no API token provided")
-				}
-				opts.apiToken = token
+			err := utils.GetApiToken(cmd, &opts.apiToken)
+			if err != nil {
+				return err
 			}
 
 			opts.api = api.NewApi(api.ApiOpts{ApiToken: opts.apiToken})
@@ -37,9 +32,6 @@ func NewCmdActive() *cobra.Command {
 			return activeRun(&opts)
 		},
 	}
-
-	// TODO: make this a persistent flag
-	cmd.Flags().StringVar(&opts.apiToken, "token", "", "Toggl Track API token")
 
 	return cmd
 }

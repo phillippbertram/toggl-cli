@@ -20,10 +20,10 @@ func GetLastDayOfMonth() time.Time {
 	return time.Date(year, month+1, 0, 0, 0, 0, 0, now.Location())
 }
 
-func GetApiToken(cmd *cobra.Command) (string, error) {
+func GetApiToken(cmd *cobra.Command, bindToken *string) error {
 	token, err := cmd.Flags().GetString("token")
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	if token == "" {
@@ -31,8 +31,8 @@ func GetApiToken(cmd *cobra.Command) (string, error) {
 	}
 
 	if token == "" {
-		return "", fmt.Errorf("no API token provided")
+		return fmt.Errorf("no API token provided")
 	}
 
-	return token, nil
+	*bindToken = token
 }
