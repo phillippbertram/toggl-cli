@@ -53,7 +53,7 @@ type TimeEntryDto struct {
 	Start time.Time `json:"start"`
 
 	// Stop time in UTC, can be null if it's still running or created with "duration" and "duronly" fields
-	Stop *string `json:"stop"`
+	Stop *time.Time `json:"stop"`
 
 	// Tag names, null if tags were not provided or were later deleted
 	Tags []string `json:"tags"`

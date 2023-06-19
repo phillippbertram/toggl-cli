@@ -1,6 +1,8 @@
 package utils
 
-import "time"
+import (
+	"time"
+)
 
 func GetFirstDayOfMonth() time.Time {
 	now := time.Now()

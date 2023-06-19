@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
+	"phillipp.io/toggl-cli/internal/cmd/active"
 	"phillipp.io/toggl-cli/internal/cmd/start"
 	"phillipp.io/toggl-cli/internal/cmd/stop"
 	"phillipp.io/toggl-cli/internal/cmd/times"
@@ -18,6 +19,7 @@ func NewCmdRoot() *cobra.Command {
 	cmd.AddCommand(times.NewCmdTimes())
 	cmd.AddCommand(start.NewCmdStart())
 	cmd.AddCommand(stop.NewCmdStop())
+	cmd.AddCommand(active.NewCmdActive())
 
 	initViper()
 
