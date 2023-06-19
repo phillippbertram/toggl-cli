@@ -9,12 +9,11 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
+            "console": "integratedTerminal",
             // "program": "${fileDirname}"
             "program": "${workspaceFolder}/main.go",
             "args": [
-                "times",
-                "-s",
-                "2023-05-24"
+                "times"
             ]
         }
     ]

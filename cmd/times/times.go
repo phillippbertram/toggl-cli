@@ -16,6 +16,8 @@ import (
 	"phillipp.io/toggl-cli/internal/utils"
 )
 
+const PRICE_PER_HOUR = 110.0
+
 // convert duration into decimal hours
 func durationToHours(duration time.Duration) float64 {
 	return float64(duration) / float64(time.Hour)
@@ -212,12 +214,13 @@ func timesRun(opts *TimesOpts) error {
 	}
 
 	t := table.NewWriter()
+	t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Client/Project/Description", "Duration (hours)"})
+	t.AppendHeader(table.Row{"Client/Project/Description", "Duration (hours)", "Price (EUR)"})
 	for key, duration := range aggregated {
-		t.AppendRow(table.Row{key, formatDuration(duration)})
+		t.AppendRow(table.Row{key, formatDuration(duration), PRICE_PER_HOUR * float64(durationToHours(duration))})
 	}
-	t.AppendFooter(table.Row{"Total", formatDuration(totalDuration)})
+	t.AppendFooter(table.Row{"Total", formatDuration(totalDuration), PRICE_PER_HOUR * float64(durationToHours(totalDuration))})
 
 	// TODO add sorting, this is not working properly
 	t.SortBy([]table.SortBy{
