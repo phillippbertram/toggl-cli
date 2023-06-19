@@ -70,22 +70,22 @@ func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntryDto, error) {
 		q["since"] = fmt.Sprintf("%d", opts.Since.Local().Unix())
 	}
 
-	start, err := time.Parse("2006-01-02", *opts.StartDate)
+	start, err := time.Parse("2006-01-02T15:04:05", *opts.StartDate)
 	if err != nil {
 		start = utils.GetStartOfMonth()
 	}
 
-	end, err := time.Parse("2006-01-02", *opts.EndDate)
+	end, err := time.Parse("2006-01-02T15:04:05", *opts.EndDate)
 	if err != nil {
 		end = utils.GetLastDayOfMonth()
 	}
 
 	if opts.Before != nil {
-		q["before"] = opts.Before.Local().Format("2006-01-02")
+		q["before"] = opts.Before.Local().Format("2006-01-02T15:04:05")
 	}
 
-	q["start_date"] = start.Format("2006-01-02")
-	q["end_date"] = end.Format("2006-01-02")
+	q["start_date"] = start.Format("2006-01-02T15:04:05")
+	q["end_date"] = end.Format("2006-01-02T15:04:05")
 
 	entries := &[]TimeEntryDto{}
 	_, err = a.httpClient.R().

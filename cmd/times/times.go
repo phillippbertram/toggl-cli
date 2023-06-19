@@ -41,7 +41,12 @@ type TimesOpts struct {
 }
 
 func (opts *TimesOpts) print() {
-	fmt.Printf("API Token: %s\n", opts.apiToken)
+	apiToken := "********"
+	if opts.apiToken == "" {
+		apiToken = "not set"
+	}
+
+	fmt.Printf("API Token: %s\n", apiToken)
 	fmt.Printf("Start Date: %s\n", opts.startDate)
 	fmt.Printf("End Date: %s\n", opts.endDate)
 }
@@ -54,12 +59,13 @@ func NewCmdTimes() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "times",
-		Short: "Download time entries for a client and time range",
+		Short: "Download all time entries for a time range",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			checkForApiToken(&opts)
-			checkForStartDate(&opts)
-			checkForEndDate(&opts)
+			interactiveCheckForApiToken(&opts)
+			interactiveCheckForStartDate(&opts)
+			interactiveCheckForEndDate(&opts)
+
 			opts.api = api.NewApi(api.ApiOpts{ApiToken: opts.apiToken})
 
 			return timesRun(&opts)
@@ -74,7 +80,7 @@ func NewCmdTimes() *cobra.Command {
 	return cmd
 }
 
-func checkForApiToken(opts *TimesOpts) {
+func interactiveCheckForApiToken(opts *TimesOpts) {
 	if opts.apiToken != "" {
 		return
 	}
@@ -96,7 +102,7 @@ func checkForApiToken(opts *TimesOpts) {
 	}
 }
 
-func checkForStartDate(opts *TimesOpts) {
+func interactiveCheckForStartDate(opts *TimesOpts) {
 	if opts.startDate != "" {
 		return
 	}
@@ -118,7 +124,7 @@ func checkForStartDate(opts *TimesOpts) {
 	}
 }
 
-func checkForEndDate(opts *TimesOpts) {
+func interactiveCheckForEndDate(opts *TimesOpts) {
 	if opts.endDate != "" {
 		return
 	}
@@ -143,7 +149,9 @@ func checkForEndDate(opts *TimesOpts) {
 // downloadTimeEntries is the function that executes when the download command is called
 func timesRun(opts *TimesOpts) error {
 
+	fmt.Printf("=== Options ===\n")
 	opts.print()
+	fmt.Printf("===============\n\n")
 
 	entries, err := opts.api.GetTimeEntries(&api.GetTimeEntriesOpts{
 		StartDate: &opts.startDate,
@@ -167,7 +175,7 @@ func timesRun(opts *TimesOpts) error {
 	latestEntry := getLatestEntry(enrichedEntries)
 
 	timeRangeDays := utils.GetDaysBetween(earliestEntry.TimeEntry.Start, latestEntry.TimeEntry.Start)
-	fmt.Printf("Time Range: %s - %s (%d days)\n", earliestEntry.TimeEntry.Start.Format("2006-01-02"), latestEntry.TimeEntry.Start.Format("2006-01-02"), len(timeRangeDays))
+	fmt.Printf("Time Entries Range: %s - %s (%d days)\n\n", earliestEntry.TimeEntry.Start.Format("2006-01-02"), latestEntry.TimeEntry.Start.Format("2006-01-02"), len(timeRangeDays))
 
 	// group by description
 	aggregated := map[string]time.Duration{}
