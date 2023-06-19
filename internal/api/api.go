@@ -110,27 +110,40 @@ func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntryDto, error) {
 		q["since"] = fmt.Sprintf("%d", opts.Since.Local().Unix())
 	}
 
-	start, err := time.Parse("2006-01-02", *opts.StartDate)
-	if err != nil {
-		start = utils.GetFirstDayOfMonth()
+	var start *time.Time
+	if opts.StartDate != nil {
+		date, err := time.Parse("2006-01-02", *opts.StartDate)
+		if err != nil {
+			date = utils.GetFirstDayOfMonth()
+		}
+		start = &date
 	}
 
-	end, err := time.Parse("2006-01-02", *opts.EndDate)
-	if err != nil {
-		end = utils.GetLastDayOfMonth()
+	var end *time.Time
+	if opts.EndDate != nil {
+		endDate, err := time.Parse("2006-01-02", *opts.EndDate)
+		if err != nil {
+			endDate = utils.GetLastDayOfMonth()
+		}
+		end = &endDate
 	}
 
 	if opts.Before != nil {
 		q["before"] = opts.Before.Local().Format("2006-01-02")
 	}
 
-	q["start_date"] = start.Format("2006-01-02")
-	q["end_date"] = end.Format("2006-01-02")
+	if start != nil {
+		q["start_date"] = start.Format("2006-01-02")
+	}
+
+	if end != nil {
+		q["end_date"] = end.Format("2006-01-02")
+	}
 
 	log.Printf("Query: %+v\n", q)
 
 	entries := &[]TimeEntryDto{}
-	_, err = a.httpClient.R().
+	_, err := a.httpClient.R().
 		SetHeader("Accept", "application/json").
 		SetQueryParams(q).
 		SetResult(entries).
