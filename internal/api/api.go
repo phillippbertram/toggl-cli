@@ -102,3 +102,28 @@ func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntryDto, error) {
 
 	return *entries, err
 }
+
+func (a *Api) GetRunningTimeEntry() (*TimeEntryDto, error) {
+	resp := &TimeEntryDto{}
+	_, err := a.httpClient.R().
+		SetResult(resp).
+		Get("/me/time_entries/current")
+
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.ID == 0 {
+		return nil, nil
+	}
+
+	return resp, nil
+}
+
+func (a *Api) StopTimeEntry(entry *TimeEntryDto) (*TimeEntryDto, error) {
+	resp := &TimeEntryDto{}
+	_, err := a.httpClient.R().
+		SetResult(resp).
+		Patch(fmt.Sprintf("/workspaces/%d/time_entries/%d/stop", entry.WorkspaceId, entry.ID))
+	return resp, err
+}
