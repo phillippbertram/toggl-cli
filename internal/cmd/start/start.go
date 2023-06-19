@@ -15,7 +15,8 @@ type StartTrackingOpts struct {
 
 	apiToken    string
 	projectName string
-	title       string
+	description string
+	force       bool
 }
 
 func NewCmdStart() *cobra.Command {
@@ -44,23 +45,36 @@ func NewCmdStart() *cobra.Command {
 	// TODO: make this a persistent flag
 	cmd.Flags().StringVar(&opts.apiToken, "token", "", "Toggl Track API token")
 	cmd.Flags().StringVarP(&opts.projectName, "project", "p", "", "Project Name to start tracking time for")
-	cmd.Flags().StringVarP(&opts.title, "title", "t", "", "Title of the time entry")
+	cmd.Flags().StringVarP(&opts.description, "description", "d", "", "Description of the time entry")
+	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Force the start of a new time entry")
 
 	return cmd
 }
 
 func startTrackingRun(opts *StartTrackingOpts) error {
 
-	// TODO: get workspace ID and project ID
+	// TODO: get workspace ID from opts
 	var workspaceID *int
-	var projectID *int
-
 	if workspaceID == nil {
 		user, err := opts.api.GetMe()
 		if err != nil {
 			return err
 		}
 		workspaceID = &user.DefaultWorkspaceID
+	}
+
+	var projectID *int
+	if opts.projectName != "" {
+		project, err := opts.api.GetProjectByName(*workspaceID, opts.projectName)
+		if err != nil {
+			return err
+		}
+		projectID = &project.ID
+	}
+
+	activeEntry, _ := opts.api.GetActiveTimeEntry()
+	if activeEntry != nil && !opts.force {
+		return fmt.Errorf("there is already an active time entry. Use --force to override")
 	}
 
 	now := time.Now()
@@ -70,7 +84,7 @@ func startTrackingRun(opts *StartTrackingOpts) error {
 		ProjectID:   projectID,
 		WorkspaceID: *workspaceID,
 		Start:       startTime,
-		Description: opts.title,
+		Description: opts.description,
 		Duration:    -1, // -1 means the entry is still running
 	})
 

@@ -46,7 +46,7 @@ func NewCmdStop() *cobra.Command {
 }
 
 func stopTrackingRun(opts *StartTrackingOpts) error {
-	runningEntry, error := opts.api.GetRunningTimeEntry()
+	runningEntry, error := opts.api.GetActiveTimeEntry()
 	if error != nil || runningEntry == nil {
 		fmt.Printf("No running time entry found\n")
 		return error

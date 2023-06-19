@@ -62,6 +62,37 @@ func (a *Api) GetProjectById(workspaceId int, projectId int) (*ProjectDto, error
 	return project, err
 }
 
+func (a *Api) GetProjects(workspaceId int) ([]ProjectDto, error) {
+	projects := &[]ProjectDto{}
+	_, err := a.httpClient.R().
+		SetResult(projects).
+		Get(fmt.Sprintf("/workspaces/%d/projects", workspaceId))
+	return *projects, err
+}
+
+func (a *Api) GetProjectByName(workspaceId int, projectName string) (*ProjectDto, error) {
+	projects, err := a.GetProjects(workspaceId)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, project := range projects {
+		if project.Name == projectName {
+			return &project, nil
+		}
+	}
+
+	return nil, fmt.Errorf("project not found")
+}
+
+func (a *Api) GetClients(workspaceId int) ([]ClientDto, error) {
+	clients := &[]ClientDto{}
+	_, err := a.httpClient.R().
+		SetResult(clients).
+		Get(fmt.Sprintf("/workspaces/%d/clients", workspaceId))
+	return *clients, err
+}
+
 func (a *Api) GetClientById(workspaceId int, clientId int) (*ClientDto, error) {
 	resp := &ClientDto{}
 	_, err := a.httpClient.R().
@@ -111,7 +142,7 @@ func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntryDto, error) {
 	return *entries, err
 }
 
-func (a *Api) GetRunningTimeEntry() (*TimeEntryDto, error) {
+func (a *Api) GetActiveTimeEntry() (*TimeEntryDto, error) {
 	resp := &TimeEntryDto{}
 	_, err := a.httpClient.R().
 		SetResult(resp).
@@ -136,6 +167,7 @@ func (a *Api) StartTimeEntry(opts *CreateTypeEntryRequestDto) (*TimeEntryDto, er
 			CreatedWith: "toggl-cli",
 			Start:       opts.Start,
 			WorkspaceID: opts.WorkspaceID,
+			ProjectID:   opts.ProjectID,
 			Duration:    opts.Duration,
 			Description: opts.Description,
 		}).
