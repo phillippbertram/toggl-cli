@@ -35,6 +35,14 @@ func NewCmdRoot() *cobra.Command {
 	return cmd
 }
 
+type LoggingConfig struct {
+	Level string `mapstructure:"level"`
+}
+
+type Config struct {
+	Logging LoggingConfig `mapstructure:"logging"`
+}
+
 func initViper() {
 	// 		home, err := os.UserHomeDir()
 	// 		cobra.CheckErr(err)
@@ -49,9 +57,14 @@ func initViper() {
 
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
-		logLevel := viper.Get("logging.level")
-		fmt.Printf("Log level: %v\n", logLevel)
 	} else {
 		fmt.Printf("Error reading config file: %v\n", err)
+	}
+
+	var config Config
+	if err := viper.Unmarshal(&config); err != nil {
+		fmt.Printf("Error unmarshalling config: %v\n", err)
+	} else {
+		fmt.Printf("Config loaded: %+v\n", config)
 	}
 }
