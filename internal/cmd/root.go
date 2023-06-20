@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"log"
-	"os"
+	"fmt"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
@@ -22,7 +21,6 @@ func NewCmdRoot() *cobra.Command {
 	}
 
 	_ = godotenv.Load()
-
 	initViper()
 
 	cmd.PersistentFlags().StringP("token", "t", "", "Toggl Track API token")
@@ -32,43 +30,28 @@ func NewCmdRoot() *cobra.Command {
 	cmd.AddCommand(stop.NewCmdStop())
 	cmd.AddCommand(active.NewCmdActive())
 
+	cmd.SilenceUsage = true
+
 	return cmd
 }
 
 func initViper() {
-	// cobra.OnInitialize(initConfig)
+	// 		home, err := os.UserHomeDir()
+	// 		cobra.CheckErr(err)
 
-	// setzt den erwarteten Pfad und Typ einer Config-Datei
-	home, err := os.UserHomeDir()
-	if err != nil {
-		log.Printf("Error loading .env file: %v\n", err)
-		log.Fatalf("Error getting user home directory: %v", err)
-	}
+	viper.SetConfigFile(".tglcli")
+	viper.SetConfigType("yml")
+
 	viper.AddConfigPath(".")
-	viper.AddConfigPath(home)
-	viper.SetConfigType("yaml")
-	viper.SetConfigFile(".config")
+	viper.AddConfigPath("$HOME")
 
+	viper.AutomaticEnv()
+
+	if err := viper.ReadInConfig(); err == nil {
+		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		logLevel := viper.Get("logging.level")
+		fmt.Printf("Log level: %v\n", logLevel)
+	} else {
+		fmt.Printf("Error reading config file: %v\n", err)
+	}
 }
-
-// func initConfig() {
-// 	if cfgFile != "" {
-// 		// Use config file from the flag.
-// 		viper.SetConfigFile(cfgFile)
-// 	} else {
-// 		// Find home directory.
-// 		home, err := os.UserHomeDir()
-// 		cobra.CheckErr(err)
-
-// 		// Search config in home directory with name ".cobra" (without extension).
-// 		viper.AddConfigPath(home)
-// 		viper.SetConfigType("yaml")
-// 		viper.SetConfigName(".cobra")
-// 	}
-
-// 	viper.AutomaticEnv()
-
-// 	if err := viper.ReadInConfig(); err == nil {
-// 		fmt.Println("Using config file:", viper.ConfigFileUsed())
-// 	}
-// }

@@ -124,4 +124,4 @@ dist/
 
 .env
 .tgl*
-!.tgl.example.yml
+!.tglcli.example.yml
