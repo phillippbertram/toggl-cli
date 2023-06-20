@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
 	"phillipp.io/toggl-cli/internal/utils"
@@ -14,11 +15,11 @@ import (
 type StartTrackingOpts struct {
 	api *api.Api
 
-	apiToken    string
-	projectName string
-	description string
-	force       bool
-	interactive bool
+	apiToken       string
+	projectName    string
+	description    string
+	force          bool
+	chooseFromPast bool
 }
 
 func NewCmdStart() *cobra.Command {
@@ -28,6 +29,12 @@ func NewCmdStart() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Start tracking time for a project",
+		Example: heredoc.Doc(`
+			$ tgl start
+			$ tgl start -p "Project Name" -d "Description"
+			$ tgl start -p "Project Name" -d "Description" --force
+			$ tgl start -l
+		`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := utils.GetApiToken(cmd, &opts.apiToken)
 			if err != nil {
@@ -39,11 +46,17 @@ func NewCmdStart() *cobra.Command {
 			return startTrackingRun(&opts)
 		},
 	}
+	// TODO: ideas
+	// tgl start # interactive move
+	// tgl start -p "Project Name" -d "Description" # start a new time entry
+	// tgl start -p "Project Name" -d "Description" --force # start a new time entry, even if there is already an active one
+	// tgl start -l # choose from the last time entries
+	// tgl start -l # empty time entry
 
 	cmd.Flags().StringVarP(&opts.projectName, "project", "p", "", "Project Name to start tracking time for")
 	cmd.Flags().StringVarP(&opts.description, "description", "d", "", "Description of the time entry")
 	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Force the start of a new time entry")
-	cmd.Flags().BoolVarP(&opts.interactive, "interactive", "i", false, "Interactive mode")
+	cmd.Flags().BoolVarP(&opts.chooseFromPast, "last", "l", false, "Choose from the last time entries")
 
 	return cmd
 }
@@ -55,7 +68,7 @@ func startTrackingRun(opts *StartTrackingOpts) error {
 		return fmt.Errorf("there is already an active time entry. Use --force to override")
 	}
 
-	if opts.interactive {
+	if opts.chooseFromPast {
 		return startIneractive(opts)
 	} else {
 		return startNewTimeEntry(opts)
