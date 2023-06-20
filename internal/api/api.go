@@ -21,14 +21,14 @@ type ApiOpts struct {
 type GetTimeEntriesOpts struct {
 	// WorkspaceId int
 
-	Since  *time.Time `json:"since"`
-	Before *time.Time `json:"before"`
+	Since  *time.Time
+	Before *time.Time
 
 	// YYYY-MM-DD
-	StartDate *string `json:"start_date"`
+	StartDate *time.Time
 
 	// YYYY-MM-DD
-	EndDate *string `json:"end_date"`
+	EndDate *time.Time
 }
 
 // Define the base URL for the Toggl Track API v9
@@ -110,21 +110,15 @@ func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntryDto, error) {
 		q["since"] = fmt.Sprintf("%d", opts.Since.Local().Unix())
 	}
 
-	var start *time.Time
-	if opts.StartDate != nil {
-		date, err := time.Parse(utils.DATE_TIME_FORMAT, *opts.StartDate)
-		if err != nil {
-			date = utils.GetStartOfMonth()
-		}
+	start := opts.StartDate
+	if opts.StartDate == nil {
+		date := utils.GetStartOfMonth()
 		start = &date
 	}
 
-	var end *time.Time
-	if opts.EndDate != nil {
-		endDate, err := time.Parse(utils.DATE_TIME_FORMAT, *opts.EndDate)
-		if err != nil {
-			endDate = utils.GetLastDayOfMonth()
-		}
+	end := opts.EndDate
+	if opts.EndDate == nil {
+		endDate := utils.GetLastDayOfMonth()
 		end = &endDate
 	}
 

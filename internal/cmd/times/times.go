@@ -155,9 +155,19 @@ func timesRun(opts *TimesOpts) error {
 	opts.print()
 	fmt.Printf("===============\n\n")
 
+	startDate, err := utils.ParseDateTime(opts.startDate, false)
+	if err != nil {
+		return fmt.Errorf("failed to parse start date: %v", err)
+	}
+
+	endDate, err := utils.ParseDateTime(opts.endDate, true)
+	if err != nil {
+		return fmt.Errorf("failed to parse end date: %v", err)
+	}
+
 	entries, err := opts.api.GetTimeEntries(&api.GetTimeEntriesOpts{
-		StartDate: &opts.startDate,
-		EndDate:   &opts.endDate,
+		StartDate: &startDate,
+		EndDate:   &endDate,
 	})
 	if err != nil {
 		log.Fatalf("Failed to download time entries: %v", err)
@@ -177,7 +187,11 @@ func timesRun(opts *TimesOpts) error {
 	latestEntry := getLatestEntry(enrichedEntries)
 
 	timeRangeDays := utils.GetDaysBetween(earliestEntry.TimeEntry.Start, latestEntry.TimeEntry.Start)
-	fmt.Printf("Time Entries Range: %s - %s (%d days)\n\n", earliestEntry.TimeEntry.Start.Format(utils.DATE_FORMAT), latestEntry.TimeEntry.Start.Format(utils.DATE_FORMAT), len(timeRangeDays))
+	fmt.Printf("Time Entries Range: %s - %s (%d days)\n\n",
+		earliestEntry.TimeEntry.Start.Local().Format(time.DateTime),
+		latestEntry.TimeEntry.Start.Local().Format(time.DateTime),
+		len(timeRangeDays),
+	)
 
 	// group by description
 	aggregated := map[string]time.Duration{}
