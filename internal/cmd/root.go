@@ -1,7 +1,11 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"phillipp.io/toggl-cli/internal/cmd/active"
 	"phillipp.io/toggl-cli/internal/cmd/start"
@@ -16,6 +20,9 @@ func NewCmdRoot() *cobra.Command {
 		Long:  `Work with the Toggl Track API from the command line`,
 	}
 
+	_ = godotenv.Load()
+	initViper()
+
 	cmd.PersistentFlags().StringP("token", "t", "", "Toggl Track API token")
 
 	cmd.AddCommand(times.NewCmdTimes())
@@ -23,43 +30,41 @@ func NewCmdRoot() *cobra.Command {
 	cmd.AddCommand(stop.NewCmdStop())
 	cmd.AddCommand(active.NewCmdActive())
 
-	initViper()
+	cmd.SilenceUsage = true
 
 	return cmd
 }
 
-func initViper() {
-	// cobra.OnInitialize(initConfig)
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cobra.yaml)")
-	// rootCmd.PersistentFlags().StringP("author", "a", "YOUR NAME", "author name for copyright attribution")
-	// rootCmd.PersistentFlags().StringVarP(&userLicense, "license", "l", "", "name of license for the project")
-	// rootCmd.PersistentFlags().Bool("viper", true, "use Viper for configuration")
-	// viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
-	// viper.BindPFlag("useViper", rootCmd.PersistentFlags().Lookup("viper"))
-	// viper.SetDefault("author", "NAME HERE <EMAIL ADDRESS>")
-	// viper.SetDefault("license", "apache")
-
+type LoggingConfig struct {
+	Level string `mapstructure:"level"`
 }
 
-// func initConfig() {
-// 	if cfgFile != "" {
-// 		// Use config file from the flag.
-// 		viper.SetConfigFile(cfgFile)
-// 	} else {
-// 		// Find home directory.
-// 		home, err := os.UserHomeDir()
-// 		cobra.CheckErr(err)
+type Config struct {
+	Logging LoggingConfig `mapstructure:"logging"`
+}
 
-// 		// Search config in home directory with name ".cobra" (without extension).
-// 		viper.AddConfigPath(home)
-// 		viper.SetConfigType("yaml")
-// 		viper.SetConfigName(".cobra")
-// 	}
+func initViper() {
+	// 		home, err := os.UserHomeDir()
+	// 		cobra.CheckErr(err)
 
-// 	viper.AutomaticEnv()
+	viper.SetConfigFile(".tglcli")
+	viper.SetConfigType("yml")
 
-// 	if err := viper.ReadInConfig(); err == nil {
-// 		fmt.Println("Using config file:", viper.ConfigFileUsed())
-// 	}
-// }
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("$HOME")
+
+	viper.AutomaticEnv()
+
+	if err := viper.ReadInConfig(); err == nil {
+		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	} else {
+		fmt.Printf("Error reading config file: %v\n", err)
+	}
+
+	var config Config
+	if err := viper.Unmarshal(&config); err != nil {
+		fmt.Printf("Error unmarshalling config: %v\n", err)
+	} else {
+		fmt.Printf("Config loaded: %+v\n", config)
+	}
+}

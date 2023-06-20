@@ -4,7 +4,6 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -103,6 +102,7 @@ func (a *Api) GetClientById(workspaceId int, clientId int) (*ClientDto, error) {
 
 // https://developers.track.toggl.com/docs/api/time_entries
 func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntryDto, error) {
+	fmt.Printf("GetTimeEntries opts: %+v\n", opts)
 
 	q := map[string]string{}
 
@@ -112,16 +112,16 @@ func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntryDto, error) {
 
 	var start *time.Time
 	if opts.StartDate != nil {
-		date, err := time.Parse("2006-01-02", *opts.StartDate)
+		date, err := time.Parse(utils.DATE_TIME_FORMAT, *opts.StartDate)
 		if err != nil {
-			date = utils.GetFirstDayOfMonth()
+			date = utils.GetStartOfMonth()
 		}
 		start = &date
 	}
 
 	var end *time.Time
 	if opts.EndDate != nil {
-		endDate, err := time.Parse("2006-01-02", *opts.EndDate)
+		endDate, err := time.Parse(utils.DATE_TIME_FORMAT, *opts.EndDate)
 		if err != nil {
 			endDate = utils.GetLastDayOfMonth()
 		}
@@ -129,18 +129,18 @@ func (a *Api) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntryDto, error) {
 	}
 
 	if opts.Before != nil {
-		q["before"] = opts.Before.Local().Format("2006-01-02")
+		q["before"] = opts.Before.Local().Format(utils.DATE_TIME_FORMAT)
 	}
 
 	if start != nil {
-		q["start_date"] = start.Format("2006-01-02")
+		q["start_date"] = start.Format(utils.DATE_TIME_FORMAT)
 	}
 
 	if end != nil {
-		q["end_date"] = end.Format("2006-01-02")
+		q["end_date"] = end.Format(utils.DATE_TIME_FORMAT)
 	}
 
-	log.Printf("Query: %+v\n", q)
+	fmt.Printf("GetTimeEntries query: %+v\n", q)
 
 	entries := &[]TimeEntryDto{}
 	_, err := a.httpClient.R().

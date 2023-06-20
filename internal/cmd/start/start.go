@@ -56,14 +56,14 @@ func startTrackingRun(opts *StartTrackingOpts) error {
 	}
 
 	if opts.interactive {
-		return startExistingTimeEntry(opts)
+		return startIneractive(opts)
 	} else {
 		return startNewTimeEntry(opts)
 	}
 
 }
 
-func startExistingTimeEntry(opts *StartTrackingOpts) error {
+func startIneractive(opts *StartTrackingOpts) error {
 	// prompt user for existing time entries using survey
 
 	now := time.Now()
@@ -111,8 +111,6 @@ func startExistingTimeEntry(opts *StartTrackingOpts) error {
 
 	fmt.Printf("Started time entry %+v\n", entry)
 	return err
-
-	return nil
 }
 
 func startNewTimeEntry(opts *StartTrackingOpts) error {

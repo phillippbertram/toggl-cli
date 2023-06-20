@@ -7,11 +7,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/AlecAivazis/survey/v2/terminal"
+	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
 	"phillipp.io/toggl-cli/internal/utils"
 )
+
+const PRICE_PER_HOUR = 110.0
 
 // convert duration into decimal hours
 func durationToHours(duration time.Duration) float64 {
@@ -30,55 +35,127 @@ type EnrichedTimeEntry struct {
 
 // Define the API token flag
 type TimesOpts struct {
-	api *api.Api
+	api         *api.Api
+	interactive bool
+	apiToken    string
+	startDate   string
+	endDate     string
+}
 
-	apiToken string
-	// clientName  string
-	// workspaceId int
-	startDate string
-	endDate   string
+func (opts *TimesOpts) print() {
+	apiToken := "********"
+	if opts.apiToken == "" {
+		apiToken = "not set"
+	}
+
+	fmt.Printf("API Token: %s\n", apiToken)
+	fmt.Printf("Start Date: %s\n", opts.startDate)
+	fmt.Printf("End Date: %s\n", opts.endDate)
 }
 
 func NewCmdTimes() *cobra.Command {
 
-	opts := TimesOpts{}
+	opts := TimesOpts{
+		interactive: false,
+	}
 
 	cmd := &cobra.Command{
 		Use:   "times",
-		Short: "Download time entries for a client and time range",
+		Short: "Download all time entries for a time range",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := utils.GetApiToken(cmd, &opts.apiToken)
-			if err != nil {
-				return err
-			}
+
+			interactiveCheckForApiToken(&opts)
+			interactiveCheckForStartDate(&opts)
+			interactiveCheckForEndDate(&opts)
+
 			opts.api = api.NewApi(api.ApiOpts{ApiToken: opts.apiToken})
 
 			return timesRun(&opts)
 		},
 	}
 
-	// Add the client name flag to the command
-	// cmd.Flags().StringVarP(&opts.clientName, "client", "c", "", "Client name")
-	// cmd.MarkFlagRequired("client") // Mark the client flag as required
-
-	// Add the wip name flag to the command
-	// cmd.Flags().IntVarP(&opts.workspaceId, "wip", "w", 0, "Client name")
-	// cmd.MarkFlagRequired("wip") // Mark the wip flag as required
-
-	// Add the start date flag to the command
+	// Add the API token flag to the command
+	cmd.Flags().StringVarP(&opts.apiToken, "token", "t", "", "Toggl Track API token")
 	cmd.Flags().StringVarP(&opts.startDate, "start", "s", "", "Start date (YYYY-MM-DD)")
-
-	// Add the end date flag to the command
 	cmd.Flags().StringVarP(&opts.endDate, "end", "e", "", "End date (YYYY-MM-DD)")
 
 	return cmd
 }
 
+func interactiveCheckForApiToken(opts *TimesOpts) {
+	if opts.apiToken != "" {
+		return
+	}
+
+	token := os.Getenv("TOGGL_API_TOKEN")
+	if token != "" {
+		opts.apiToken = token
+		return
+	}
+
+	prompt := &survey.Input{
+		Message: "Please enter your Toggl Track API token:",
+		Help:    "https://track.toggl.com/profile",
+	}
+	survey.AskOne(prompt, &opts.apiToken, survey.WithValidator(survey.Required))
+
+	if opts.apiToken == "" {
+		log.Fatalf("%s", color.RedString("No API token provided"))
+	}
+}
+
+func interactiveCheckForStartDate(opts *TimesOpts) {
+	if opts.startDate != "" {
+		return
+	}
+
+	startOfMonth := utils.GetStartOfMonth().Local().Format(utils.DATE_FORMAT)
+
+	prompt := &survey.Input{
+		Message: fmt.Sprintf("Please enter the start date (YYYY-MM-DD) [%s]:", startOfMonth),
+	}
+	err := survey.AskOne(prompt, &opts.startDate)
+	if err != nil {
+		if err == terminal.InterruptErr {
+			log.Fatal()
+		}
+	}
+
+	if opts.startDate == "" {
+		opts.startDate = startOfMonth
+	}
+}
+
+func interactiveCheckForEndDate(opts *TimesOpts) {
+	if opts.endDate != "" {
+		return
+	}
+
+	today := utils.GetEndOfTodayDay().Local().Format(time.RFC3339)
+
+	prompt := &survey.Input{
+		Message: fmt.Sprintf("Please enter the end date (YYYY-MM-DD) [%s]:", today),
+	}
+	err := survey.AskOne(prompt, &opts.endDate)
+	if err != nil {
+		if err == terminal.InterruptErr {
+			log.Fatal()
+		}
+	}
+
+	if opts.endDate == "" {
+		opts.endDate = today
+	}
+}
+
 // downloadTimeEntries is the function that executes when the download command is called
 func timesRun(opts *TimesOpts) error {
 
+	fmt.Printf("=== Options ===\n")
+	opts.print()
+	fmt.Printf("===============\n\n")
+
 	entries, err := opts.api.GetTimeEntries(&api.GetTimeEntriesOpts{
-		// WorkspaceId: opts.workspaceId,
 		StartDate: &opts.startDate,
 		EndDate:   &opts.endDate,
 	})
@@ -99,7 +176,8 @@ func timesRun(opts *TimesOpts) error {
 	earliestEntry := getEarliestEntry(enrichedEntries)
 	latestEntry := getLatestEntry(enrichedEntries)
 
-	fmt.Printf("Time Range: %s - %s\n", earliestEntry.TimeEntry.Start.Format("2006-01-02"), latestEntry.TimeEntry.Start.Format("2006-01-02"))
+	timeRangeDays := utils.GetDaysBetween(earliestEntry.TimeEntry.Start, latestEntry.TimeEntry.Start)
+	fmt.Printf("Time Entries Range: %s - %s (%d days)\n\n", earliestEntry.TimeEntry.Start.Format(utils.DATE_FORMAT), latestEntry.TimeEntry.Start.Format(utils.DATE_FORMAT), len(timeRangeDays))
 
 	// group by description
 	aggregated := map[string]time.Duration{}
@@ -136,12 +214,13 @@ func timesRun(opts *TimesOpts) error {
 	}
 
 	t := table.NewWriter()
+	t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Client/Project/Description", "Duration (hours)"})
+	t.AppendHeader(table.Row{"Client/Project/Description", "Duration (hours)", "Price (EUR)"})
 	for key, duration := range aggregated {
-		t.AppendRow(table.Row{key, formatDuration(duration)})
+		t.AppendRow(table.Row{key, formatDuration(duration), PRICE_PER_HOUR * float64(durationToHours(duration))})
 	}
-	t.AppendFooter(table.Row{"Total", formatDuration(totalDuration)})
+	t.AppendFooter(table.Row{"Total", formatDuration(totalDuration), PRICE_PER_HOUR * float64(durationToHours(totalDuration))})
 
 	// TODO add sorting, this is not working properly
 	t.SortBy([]table.SortBy{
