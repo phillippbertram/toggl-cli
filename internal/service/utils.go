@@ -1,10 +1,13 @@
 package service
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jedib0t/go-pretty/table"
+	"phillipp.io/toggl-cli/internal/utils"
 )
 
 func PrettyPrintTimeEntries(enrichedEntries []TimeEntry) {
@@ -62,4 +65,58 @@ func PrettyPrintTimeEntries(enrichedEntries []TimeEntry) {
 	}
 
 	t.Render()
+}
+
+func GetStatistics(entries []TimeEntry) *TimeStatistics {
+	totalDuration := time.Duration(0)
+	for _, entry := range entries {
+		totalDuration += time.Duration(entry.TimeEntry.Duration) * time.Second
+	}
+
+	earliestEntry := GetEarliestEntry(entries)
+	latestEntry := GetLatestEntry(entries)
+
+	if earliestEntry != nil && latestEntry != nil {
+		timeRangeDays := utils.GetDaysBetween(earliestEntry.TimeEntry.Start, latestEntry.TimeEntry.Start)
+		fmt.Printf("Time Entries Range: %s - %s (%d days)\n\n",
+			earliestEntry.TimeEntry.Start.Local().Format(time.DateTime),
+			latestEntry.TimeEntry.Start.Local().Format(time.DateTime),
+			len(timeRangeDays),
+		)
+	}
+
+	// group by description
+	aggregated := map[string]time.Duration{}
+	for _, eentry := range entries {
+		entry := eentry.TimeEntry
+		project := eentry.Project
+		client := eentry.Client
+		group := strings.Split(*entry.Description, ":")[0]
+
+		if group == "" {
+			group = "<NO_DESCRIPTION>"
+		}
+
+		keys := []string{}
+		if client != nil {
+			keys = append(keys, client.Name)
+		} else {
+			keys = append(keys, "NO_CLIENT")
+		}
+		if project != nil {
+			keys = append(keys, project.Name)
+		} else {
+			keys = append(keys, "NO_PROJECT")
+		}
+		keys = append(keys, group)
+
+		key := strings.Join(keys, "/")
+		aggregated[key] += time.Duration(entry.Duration) * time.Second
+	}
+
+	return &TimeStatistics{
+		TotalDuration: totalDuration,
+		EarliestEntry: earliestEntry,
+		LatestEntry:   latestEntry,
+	}
 }

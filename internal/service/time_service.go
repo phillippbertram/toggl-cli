@@ -62,25 +62,30 @@ func (s *TimeService) GetGroupedTimeEntries(opts *GetTimeEntriesOpts) ([]Grouped
 
 	entries = IgnoreRunningEntries(entries)
 
-	groupedEntries := []GroupedEntry{}
-	for _, entry := range entries {
-		var group *GroupedEntry
-		for _, existingGroup := range groupedEntries {
-			if existingGroup.Project != nil && entry.Project != nil && existingGroup.Project.ID == entry.Project.ID {
-				group = &existingGroup
-				break
-			}
-		}
+	// TODO: move this to an utils function
+	// Grouped entries map to quickly lookup existing groups
+	groupedEntriesMap := make(map[int]*GroupedEntry)
 
-		if group == nil {
+	for _, entry := range entries {
+		groupID := entry.Project.ID
+		group, exists := groupedEntriesMap[groupID]
+
+		if !exists {
 			group = &GroupedEntry{
 				Project: entry.Project,
 				Client:  entry.Client,
+				Entries: []TimeEntry{},
 			}
-			groupedEntries = append(groupedEntries, *group)
+			groupedEntriesMap[groupID] = group
 		}
 
 		group.Entries = append(group.Entries, entry)
+	}
+
+	// Convert the map of groups to a slice
+	groupedEntries := make([]GroupedEntry, 0, len(groupedEntriesMap))
+	for _, group := range groupedEntriesMap {
+		groupedEntries = append(groupedEntries, *group)
 	}
 
 	return groupedEntries, nil

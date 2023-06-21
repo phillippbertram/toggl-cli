@@ -1,23 +1,31 @@
 package service
 
-func GetEarliestEntry(entries []TimeEntry) TimeEntry {
+func GetEarliestEntry(entries []TimeEntry) *TimeEntry {
+	if len(entries) == 0 {
+		return nil
+	}
+
 	earliestEntry := entries[0]
 	for _, entry := range entries {
 		if entry.TimeEntry.Start.Compare(earliestEntry.TimeEntry.Start) == -1 {
 			earliestEntry = entry
 		}
 	}
-	return earliestEntry
+	return &earliestEntry
 }
 
-func GetLatestEntry(entries []TimeEntry) TimeEntry {
+func GetLatestEntry(entries []TimeEntry) *TimeEntry {
+	if len(entries) == 0 {
+		return nil
+	}
+
 	latestEntry := entries[0]
 	for _, entry := range entries {
 		if entry.TimeEntry.Start.Compare(latestEntry.TimeEntry.Start) == 1 {
 			latestEntry = entry
 		}
 	}
-	return latestEntry
+	return &latestEntry
 }
 
 func IgnoreRunningEntries(entries []TimeEntry) []TimeEntry {

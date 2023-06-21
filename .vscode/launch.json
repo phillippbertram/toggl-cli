@@ -13,9 +13,7 @@
             // "program": "${fileDirname}"
             "program": "${workspaceFolder}/cmd/cli/main.go",
             "args": [
-                "active",
-                "-t",
-                "326bffd05d64219bdac6e2bc2073d60d"
+                "times"
             ]
         }
     ]

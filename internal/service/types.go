@@ -1,6 +1,10 @@
 package service
 
-import "phillipp.io/toggl-cli/internal/api"
+import (
+	"time"
+
+	"phillipp.io/toggl-cli/internal/api"
+)
 
 type TimeEntry struct {
 	TimeEntry api.TimeEntryDto
@@ -12,4 +16,10 @@ type GroupedEntry struct {
 	Project *api.ProjectDto
 	Client  *api.ClientDto
 	Entries []TimeEntry
+}
+
+type TimeStatistics struct {
+	TotalDuration time.Duration
+	EarliestEntry *TimeEntry
+	LatestEntry   *TimeEntry
 }
