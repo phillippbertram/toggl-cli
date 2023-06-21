@@ -13,9 +13,9 @@
             // "program": "${fileDirname}"
             "program": "${workspaceFolder}/cmd/cli/main.go",
             "args": [
-                "times",
-                "-s",
-                "2023-06-13"
+                "active",
+                "-t",
+                "326bffd05d64219bdac6e2bc2073d60d"
             ]
         }
     ]
