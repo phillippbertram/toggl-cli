@@ -13,29 +13,14 @@ import (
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
+	"phillipp.io/toggl-cli/internal/cmd/times/ls"
+	"phillipp.io/toggl-cli/internal/service"
 	"phillipp.io/toggl-cli/internal/utils"
 )
 
-const PRICE_PER_HOUR = 110.0
-
-// convert duration into decimal hours
-func durationToHours(duration time.Duration) float64 {
-	return float64(duration) / float64(time.Hour)
-}
-
-func formatDuration(duration time.Duration) string {
-	return fmt.Sprintf("%.2f", durationToHours(duration))
-}
-
-type EnrichedTimeEntry struct {
-	TimeEntry api.TimeEntryDto
-	Project   *api.ProjectDto
-	Client    *api.ClientDto
-}
-
 // Define the API token flag
 type TimesOpts struct {
-	api         *api.Api
+	timeService *service.TimeService
 	interactive bool
 	apiToken    string
 	startDate   string
@@ -64,32 +49,32 @@ func NewCmdTimes() *cobra.Command {
 		Short: "Download all time entries for a time range",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			interactiveCheckForApiToken(&opts)
+			interactiveCheckForApiToken(cmd, &opts)
 			interactiveCheckForStartDate(&opts)
 			interactiveCheckForEndDate(&opts)
 
-			opts.api = api.NewApi(api.ApiOpts{ApiToken: opts.apiToken})
+			api := api.NewApi(api.ApiOpts{ApiToken: opts.apiToken})
+			opts.timeService = service.NewTimeService(api)
 
 			return timesRun(&opts)
 		},
 	}
 
-	// Add the API token flag to the command
-	cmd.Flags().StringVarP(&opts.apiToken, "token", "t", "", "Toggl Track API token")
 	cmd.Flags().StringVarP(&opts.startDate, "start", "s", "", "Start date (YYYY-MM-DD)")
 	cmd.Flags().StringVarP(&opts.endDate, "end", "e", "", "End date (YYYY-MM-DD)")
+
+	cmd.AddCommand(ls.NewCmdLs())
 
 	return cmd
 }
 
-func interactiveCheckForApiToken(opts *TimesOpts) {
+func interactiveCheckForApiToken(cmd *cobra.Command, opts *TimesOpts) {
 	if opts.apiToken != "" {
 		return
 	}
 
-	token := os.Getenv("TOGGL_API_TOKEN")
-	if token != "" {
-		opts.apiToken = token
+	utils.GetApiToken(cmd, &opts.apiToken)
+	if opts.apiToken != "" {
 		return
 	}
 
@@ -148,40 +133,69 @@ func interactiveCheckForEndDate(opts *TimesOpts) {
 	}
 }
 
-// downloadTimeEntries is the function that executes when the download command is called
 func timesRun(opts *TimesOpts) error {
 
 	fmt.Printf("=== Options ===\n")
 	opts.print()
 	fmt.Printf("===============\n\n")
 
-	entries, err := opts.api.GetTimeEntries(&api.GetTimeEntriesOpts{
-		StartDate: &opts.startDate,
-		EndDate:   &opts.endDate,
+	startDate, err := utils.ParseDateTime(opts.startDate, false)
+	if err != nil {
+		return fmt.Errorf("failed to parse start date: %v", err)
+	}
+
+	endDate, err := utils.ParseDateTime(opts.endDate, true)
+	if err != nil {
+		return fmt.Errorf("failed to parse end date: %v", err)
+	}
+
+	groupedEntries, err := opts.timeService.GetGroupedTimeEntries(&service.GetTimeEntriesOpts{
+		StartDate: &startDate,
+		EndDate:   &endDate,
 	})
+
 	if err != nil {
-		log.Fatalf("Failed to download time entries: %v", err)
+		return fmt.Errorf("failed to download time entries: %v", err)
 	}
 
-	enrichedEntries, err := getEnrichedTimeEntries(entries, opts)
-	if err != nil {
-		log.Fatalf("failed to enrich time entries: %v", err)
+	for _, group := range groupedEntries {
+		printGroup(group)
+
+		fmt.Println()
+		fmt.Println(strings.Repeat("-", 80))
+		fmt.Println()
 	}
 
-	totalDuration := time.Duration(0)
-	for _, entry := range enrichedEntries {
-		totalDuration += time.Duration(entry.TimeEntry.Duration) * time.Second
+	return nil
+
+}
+
+func printGroup(group service.GroupedEntry) {
+	entries := group.Entries
+	aggregated := aggregateEntries(entries)
+	statistics := service.GetStatistics(entries)
+
+	t := table.NewWriter()
+	t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Client/Project/Description", "Duration (hours)"})
+
+	for key, duration := range aggregated {
+		t.AppendRow(table.Row{key, utils.FormatDuration(duration)})
 	}
 
-	earliestEntry := getEarliestEntry(enrichedEntries)
-	latestEntry := getLatestEntry(enrichedEntries)
+	t.AppendFooter(table.Row{"Total", utils.FormatDuration(statistics.TotalDuration)})
 
-	timeRangeDays := utils.GetDaysBetween(earliestEntry.TimeEntry.Start, latestEntry.TimeEntry.Start)
-	fmt.Printf("Time Entries Range: %s - %s (%d days)\n\n", earliestEntry.TimeEntry.Start.Format(utils.DATE_FORMAT), latestEntry.TimeEntry.Start.Format(utils.DATE_FORMAT), len(timeRangeDays))
+	// TODO add sorting, this is not working properly
+	t.SortBy([]table.SortBy{
+		{Name: "Duration (hours)", Mode: table.Asc},
+	})
+	t.Render()
+}
 
-	// group by description
+func aggregateEntries(entries []service.TimeEntry) map[string]time.Duration {
 	aggregated := map[string]time.Duration{}
-	for _, eentry := range enrichedEntries {
+	for _, eentry := range entries {
 		entry := eentry.TimeEntry
 		project := eentry.Project
 		client := eentry.Client
@@ -207,107 +221,5 @@ func timesRun(opts *TimesOpts) error {
 		key := strings.Join(keys, "/")
 		aggregated[key] += time.Duration(entry.Duration) * time.Second
 	}
-
-	totalDuration = time.Duration(0)
-	for _, duration := range aggregated {
-		totalDuration += duration
-	}
-
-	t := table.NewWriter()
-	t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
-	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Client/Project/Description", "Duration (hours)", "Price (EUR)"})
-	for key, duration := range aggregated {
-		t.AppendRow(table.Row{key, formatDuration(duration), PRICE_PER_HOUR * float64(durationToHours(duration))})
-	}
-	t.AppendFooter(table.Row{"Total", formatDuration(totalDuration), PRICE_PER_HOUR * float64(durationToHours(totalDuration))})
-
-	// TODO add sorting, this is not working properly
-	t.SortBy([]table.SortBy{
-		{Name: "Duration (hours)", Mode: table.Asc},
-	})
-	t.Render()
-
-	return nil
-}
-
-func getEnrichedTimeEntries(entries []api.TimeEntryDto, opts *TimesOpts) ([]EnrichedTimeEntry, error) {
-	projects := []api.ProjectDto{}
-	clients := []api.ClientDto{}
-
-	enrichedEntries := []EnrichedTimeEntry{}
-	for _, entry := range entries {
-
-		// read from cache
-		project := api.GetProjectById(projects, entry.ProjectId)
-		if project == nil && entry.ProjectId != nil {
-			// fetch from API
-			newProject, err := opts.api.GetProjectById(entry.WorkspaceId, *entry.ProjectId)
-			project = newProject
-			if err != nil {
-				log.Printf("Failed to get project: %v\n", err)
-			}
-			if project != nil {
-				projects = append(projects, *project)
-			}
-		}
-
-		var client *api.ClientDto
-		if project != nil {
-			// read from cache
-			client = api.GetClientById(clients, project.ClientId)
-			if client == nil && project.ClientId != nil {
-				// fetch from API
-				freshClient, err := opts.api.GetClientById(entry.WorkspaceId, *project.ClientId)
-				client = freshClient
-				if err != nil {
-					log.Printf("failed to get client: %v", err)
-				}
-				if client != nil {
-					clients = append(clients, *client)
-				} else {
-					log.Printf("client not found: %d", *project.ClientId)
-				}
-			}
-		}
-
-		enrichedEntries = append(enrichedEntries, EnrichedTimeEntry{
-			TimeEntry: entry,
-			Project:   project,
-			Client:    client,
-		})
-	}
-
-	enrichedEntries = ignoreRunningEntries(enrichedEntries)
-	return enrichedEntries, nil
-}
-
-func getEarliestEntry(entries []EnrichedTimeEntry) EnrichedTimeEntry {
-	earliestEntry := entries[0]
-	for _, entry := range entries {
-		if entry.TimeEntry.Start.Compare(earliestEntry.TimeEntry.Start) == -1 {
-			earliestEntry = entry
-		}
-	}
-	return earliestEntry
-}
-
-func getLatestEntry(entries []EnrichedTimeEntry) EnrichedTimeEntry {
-	latestEntry := entries[0]
-	for _, entry := range entries {
-		if entry.TimeEntry.Start.Compare(latestEntry.TimeEntry.Start) == 1 {
-			latestEntry = entry
-		}
-	}
-	return latestEntry
-}
-
-func ignoreRunningEntries(entries []EnrichedTimeEntry) []EnrichedTimeEntry {
-	filtered := []EnrichedTimeEntry{}
-	for _, entry := range entries {
-		if entry.TimeEntry.Duration >= 0 {
-			filtered = append(filtered, entry)
-		}
-	}
-	return filtered
+	return aggregated
 }

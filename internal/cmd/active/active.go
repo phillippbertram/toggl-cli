@@ -1,14 +1,17 @@
 package active
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
+	"phillipp.io/toggl-cli/internal/service"
 	"phillipp.io/toggl-cli/internal/utils"
 )
 
 // Define the API token flag
 type ActiveOpts struct {
-	api *api.Api
+	timeService *service.TimeService
 
 	apiToken string
 }
@@ -27,7 +30,8 @@ func NewCmdActive() *cobra.Command {
 				return err
 			}
 
-			opts.api = api.NewApi(api.ApiOpts{ApiToken: opts.apiToken})
+			api := api.NewApi(api.ApiOpts{ApiToken: opts.apiToken})
+			opts.timeService = service.NewTimeService(api)
 
 			return activeRun(&opts)
 		},
@@ -38,11 +42,18 @@ func NewCmdActive() *cobra.Command {
 
 func activeRun(opts *ActiveOpts) error {
 
-	activeEntry, err := opts.api.GetActiveTimeEntry()
+	activeEntry, err := opts.timeService.GetActiveTimeEntry()
 	if err != nil {
 		return err
 	}
 
-	api.PrettyPrintTimeEntry(activeEntry)
+	if activeEntry == nil {
+		fmt.Println("There is no active time entry")
+		return nil
+	}
+
+	fmt.Println("Active time entry:")
+	service.PrettyPrintTimeEntries([]service.TimeEntry{*activeEntry})
+
 	return err
 }

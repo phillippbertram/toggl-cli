@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	DATE_FORMAT      = time.TimeOnly
+	DATE_FORMAT      = time.DateOnly
 	DATE_TIME_FORMAT = time.RFC3339
 )
 
@@ -58,4 +58,33 @@ func GetApiToken(cmd *cobra.Command, bindToken *string) error {
 
 	*bindToken = token
 	return nil
+}
+
+func ParseDateTime(str string, useEndOfDay bool) (time.Time, error) {
+	formats := []string{
+		time.DateOnly,
+		time.DateTime,
+		time.RFC3339,
+		time.DateOnly + " 15:04",
+	}
+
+	var parsedTime time.Time
+	var err error
+
+	for _, format := range formats {
+		parsedTime, err = time.Parse(format, str)
+		if err == nil {
+			break
+		}
+	}
+
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	if useEndOfDay && parsedTime.Hour() == 0 && parsedTime.Minute() == 0 && parsedTime.Second() == 0 {
+		parsedTime = parsedTime.Add(time.Hour*23 + time.Minute*59 + time.Second*59)
+	}
+
+	return parsedTime, nil
 }
