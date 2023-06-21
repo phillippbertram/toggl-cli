@@ -5,53 +5,61 @@ import (
 	"time"
 
 	"github.com/jedib0t/go-pretty/table"
-	"phillipp.io/toggl-cli/internal/utils"
 )
 
-func PrettyPrintTimeEntry(enrichedEntry *TimeEntry) {
-	if enrichedEntry == nil {
-		return
-	}
-
-	entry := enrichedEntry.TimeEntry
-
-	projectName := ""
-	if enrichedEntry.Project != nil {
-		projectName = enrichedEntry.Project.Name
-	}
-
-	projectStop := "-"
-	if entry.Stop != nil {
-		projectStop = entry.Stop.Format(utils.DATE_TIME_FORMAT)
-	}
-
-	description := "-"
-	if entry.Description != nil {
-		description = *entry.Description
-	}
-
-	duration := time.Duration(entry.Duration) * time.Second
-	if entry.Duration < -1 {
-		duration = time.Since(entry.Start)
-	}
-	duration = duration.Round(time.Second)
-
-	status := "running"
-	if entry.Stop != nil {
-		status = "stopped"
-	}
+func PrettyPrintTimeEntries(enrichedEntries []TimeEntry) {
 
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"ID", "Description", "Project", "Start", "End", "Duration", "Status"})
-	t.AppendRow(table.Row{
-		entry.ID,
-		description,
-		projectName,
-		entry.Start.Format(utils.DATE_TIME_FORMAT),
-		projectStop,
-		duration,
-		status,
-	})
+	t.AppendHeader(table.Row{"Description", "Project", "Start", "End", "Duration"})
+
+	for _, rEntry := range enrichedEntries {
+		entry := rEntry.TimeEntry
+
+		var description string
+		if entry.Description != nil {
+			description = *entry.Description
+		} else {
+			description = "<NO_DESCRIPTION>"
+		}
+		// max length 10
+		if len(description) > 30 {
+			description = description[:30]
+			description += "..."
+		}
+
+		startDate := entry.Start.Local().Format(time.DateTime)
+
+		var endDate string
+		if entry.Stop != nil {
+			endDate = entry.Stop.Local().Format(time.DateTime)
+		} else {
+			endDate = "-"
+		}
+
+		var duration string
+		if entry.Duration >= 0 {
+			duration = (time.Duration(entry.Duration) * time.Second).String()
+		} else {
+			duration = time.Since(entry.Start).String()
+		}
+
+		var projectName string
+		if rEntry.Project != nil {
+			projectName = rEntry.Project.Name
+		} else {
+			projectName = "<NO_PROJECT>"
+		}
+
+		t.AppendRow(table.Row{
+			// entry.ID,
+			description,
+			projectName,
+			startDate,
+			endDate,
+			duration,
+		})
+	}
+
 	t.Render()
 }

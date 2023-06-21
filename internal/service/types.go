@@ -7,3 +7,9 @@ type TimeEntry struct {
 	Project   *api.ProjectDto
 	Client    *api.ClientDto
 }
+
+type GroupedEntry struct {
+	Project *api.ProjectDto
+	Client  *api.ClientDto
+	Entries []TimeEntry
+}

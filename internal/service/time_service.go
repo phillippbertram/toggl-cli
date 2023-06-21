@@ -54,6 +54,38 @@ func (s *TimeService) GetActiveTimeEntry() (*TimeEntry, error) {
 	return s.getEnrichedTimeEntry(*activeEntry)
 }
 
+func (s *TimeService) GetGroupedTimeEntries(opts *GetTimeEntriesOpts) ([]GroupedEntry, error) {
+	entries, err := s.GetTimeEntries(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	entries = IgnoreRunningEntries(entries)
+
+	groupedEntries := []GroupedEntry{}
+	for _, entry := range entries {
+		var group *GroupedEntry
+		for _, existingGroup := range groupedEntries {
+			if existingGroup.Project != nil && entry.Project != nil && existingGroup.Project.ID == entry.Project.ID {
+				group = &existingGroup
+				break
+			}
+		}
+
+		if group == nil {
+			group = &GroupedEntry{
+				Project: entry.Project,
+				Client:  entry.Client,
+			}
+			groupedEntries = append(groupedEntries, *group)
+		}
+
+		group.Entries = append(group.Entries, entry)
+	}
+
+	return groupedEntries, nil
+}
+
 func (s *TimeService) getEnrichedTimeEntry(entry api.TimeEntryDto) (*TimeEntry, error) {
 	entries := []api.TimeEntryDto{entry}
 	enrichedEntries, err := s.getEnrichedTimeEntries(entries)

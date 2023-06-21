@@ -53,7 +53,7 @@ func activeRun(opts *ActiveOpts) error {
 	}
 
 	fmt.Println("Active time entry:")
-	service.PrettyPrintTimeEntry(activeEntry)
+	service.PrettyPrintTimeEntries([]service.TimeEntry{*activeEntry})
 
 	return err
 }
