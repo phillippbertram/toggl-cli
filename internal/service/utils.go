@@ -39,7 +39,7 @@ func PrettyPrintTimeEntries(enrichedEntries []TimeEntry) {
 		if entry.Stop != nil {
 			endDate = entry.Stop.Local().Format(time.DateTime)
 		} else {
-			endDate = "-"
+			endDate = "running"
 		}
 
 		var duration string

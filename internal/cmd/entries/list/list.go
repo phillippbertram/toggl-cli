@@ -7,13 +7,15 @@ import (
 	"phillipp.io/toggl-cli/internal/utils"
 )
 
-type LsOpts struct {
+type ListOpts struct {
 	timeService *service.TimeService
+
+	Client string
 }
 
 func NewCmdList() *cobra.Command {
 
-	opts := LsOpts{}
+	opts := ListOpts{}
 
 	cmd := &cobra.Command{
 		Use:     "list",
@@ -34,11 +36,15 @@ func NewCmdList() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVarP(&opts.Client, "client", "c", "", "Client name")
+
 	return cmd
 }
 
-func lsRun(opts *LsOpts) error {
-	entries, err := opts.timeService.GetTimeEntries(&service.GetTimeEntriesOpts{})
+func lsRun(opts *ListOpts) error {
+	entries, err := opts.timeService.GetTimeEntries(&service.GetTimeEntriesOpts{
+		ClientName: &opts.Client,
+	})
 	if err != nil {
 		return err
 	}

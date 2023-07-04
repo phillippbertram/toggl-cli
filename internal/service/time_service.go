@@ -19,6 +19,8 @@ type GetTimeEntriesOpts struct {
 	Since  *time.Time
 	Before *time.Time
 
+	ClientName *string
+
 	// YYYY-MM-DD
 	StartDate *time.Time
 
@@ -38,7 +40,16 @@ func (s *TimeService) GetTimeEntries(opts *GetTimeEntriesOpts) ([]TimeEntry, err
 		return nil, err
 	}
 
-	return s.getEnrichedTimeEntries(entries)
+	enrichedEntries, err := s.getEnrichedTimeEntries(entries)
+	if err != nil {
+		return nil, err
+	}
+	if opts.ClientName != nil && *opts.ClientName != "" {
+		entriesByClient := FilterByClientName(enrichedEntries, *opts.ClientName)
+		return entriesByClient, nil
+	}
+
+	return enrichedEntries, nil
 }
 
 func (s *TimeService) GetActiveTimeEntry() (*TimeEntry, error) {
