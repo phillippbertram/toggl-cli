@@ -8,9 +8,10 @@ import (
 	"github.com/spf13/viper"
 
 	"phillipp.io/toggl-cli/internal/cmd/active"
+	"phillipp.io/toggl-cli/internal/cmd/entries"
+	"phillipp.io/toggl-cli/internal/cmd/report"
 	"phillipp.io/toggl-cli/internal/cmd/start"
 	"phillipp.io/toggl-cli/internal/cmd/stop"
-	"phillipp.io/toggl-cli/internal/cmd/times"
 )
 
 func NewCmdRoot() *cobra.Command {
@@ -25,10 +26,11 @@ func NewCmdRoot() *cobra.Command {
 
 	cmd.PersistentFlags().StringP("token", "t", "", "Toggl Track API token")
 
-	cmd.AddCommand(times.NewCmdTimes())
+	cmd.AddCommand(report.NewCmdReport())
 	cmd.AddCommand(start.NewCmdStart())
 	cmd.AddCommand(stop.NewCmdStop())
 	cmd.AddCommand(active.NewCmdActive())
+	cmd.AddCommand(entries.NewCmdEntries())
 
 	cmd.SilenceUsage = true
 

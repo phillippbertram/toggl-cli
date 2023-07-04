@@ -1,4 +1,4 @@
-package times
+package report
 
 import (
 	"fmt"
@@ -13,13 +13,12 @@ import (
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
-	"phillipp.io/toggl-cli/internal/cmd/times/ls"
 	"phillipp.io/toggl-cli/internal/service"
 	"phillipp.io/toggl-cli/internal/utils"
 )
 
 // Define the API token flag
-type TimesOpts struct {
+type ReportOpts struct {
 	timeService *service.TimeService
 	interactive bool
 	apiToken    string
@@ -27,7 +26,7 @@ type TimesOpts struct {
 	endDate     string
 }
 
-func (opts *TimesOpts) print() {
+func (opts *ReportOpts) print() {
 	apiToken := "********"
 	if opts.apiToken == "" {
 		apiToken = "not set"
@@ -38,15 +37,15 @@ func (opts *TimesOpts) print() {
 	fmt.Printf("End Date: %s\n", opts.endDate)
 }
 
-func NewCmdTimes() *cobra.Command {
+func NewCmdReport() *cobra.Command {
 
-	opts := TimesOpts{
+	opts := ReportOpts{
 		interactive: false,
 	}
 
 	cmd := &cobra.Command{
-		Use:   "times",
-		Short: "Download all time entries for a time range",
+		Use:   "report",
+		Short: "Makes a report of all time entries for a time range grouped by project",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			interactiveCheckForApiToken(cmd, &opts)
@@ -56,19 +55,17 @@ func NewCmdTimes() *cobra.Command {
 			api := api.NewApi(api.ApiOpts{ApiToken: opts.apiToken})
 			opts.timeService = service.NewTimeService(api)
 
-			return timesRun(&opts)
+			return reportRun(&opts)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.startDate, "start", "s", "", "Start date (YYYY-MM-DD)")
 	cmd.Flags().StringVarP(&opts.endDate, "end", "e", "", "End date (YYYY-MM-DD)")
 
-	cmd.AddCommand(ls.NewCmdLs())
-
 	return cmd
 }
 
-func interactiveCheckForApiToken(cmd *cobra.Command, opts *TimesOpts) {
+func interactiveCheckForApiToken(cmd *cobra.Command, opts *ReportOpts) {
 	if opts.apiToken != "" {
 		return
 	}
@@ -89,15 +86,15 @@ func interactiveCheckForApiToken(cmd *cobra.Command, opts *TimesOpts) {
 	}
 }
 
-func interactiveCheckForStartDate(opts *TimesOpts) {
+func interactiveCheckForStartDate(opts *ReportOpts) {
 	if opts.startDate != "" {
 		return
 	}
 
-	startOfMonth := utils.GetStartOfMonth().Local().Format(utils.DATE_FORMAT)
+	defaultStartDate := utils.GetStartOfWeek().Local().Format(utils.DATE_FORMAT)
 
 	prompt := &survey.Input{
-		Message: fmt.Sprintf("Please enter the start date (YYYY-MM-DD) [%s]:", startOfMonth),
+		Message: fmt.Sprintf("Please enter the start date (YYYY-MM-DD) [%s]:", defaultStartDate),
 	}
 	err := survey.AskOne(prompt, &opts.startDate)
 	if err != nil {
@@ -107,11 +104,11 @@ func interactiveCheckForStartDate(opts *TimesOpts) {
 	}
 
 	if opts.startDate == "" {
-		opts.startDate = startOfMonth
+		opts.startDate = defaultStartDate
 	}
 }
 
-func interactiveCheckForEndDate(opts *TimesOpts) {
+func interactiveCheckForEndDate(opts *ReportOpts) {
 	if opts.endDate != "" {
 		return
 	}
@@ -133,7 +130,7 @@ func interactiveCheckForEndDate(opts *TimesOpts) {
 	}
 }
 
-func timesRun(opts *TimesOpts) error {
+func reportRun(opts *ReportOpts) error {
 
 	fmt.Printf("=== Options ===\n")
 	opts.print()

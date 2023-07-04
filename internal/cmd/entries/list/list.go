@@ -1,4 +1,4 @@
-package ls
+package list
 
 import (
 	"github.com/spf13/cobra"
@@ -11,13 +11,14 @@ type LsOpts struct {
 	timeService *service.TimeService
 }
 
-func NewCmdLs() *cobra.Command {
+func NewCmdList() *cobra.Command {
 
 	opts := LsOpts{}
 
 	cmd := &cobra.Command{
-		Use:   "ls",
-		Short: "List all time entries for a time range",
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List all time entries for a time range",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			var apiToken string
