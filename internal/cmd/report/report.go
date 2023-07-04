@@ -80,7 +80,6 @@ func interactiveCheckForApiToken(cmd *cobra.Command, opts *ReportOpts) {
 		Help:    "https://track.toggl.com/profile",
 	}
 	survey.AskOne(prompt, &opts.apiToken, survey.WithValidator(survey.Required))
-
 	if opts.apiToken == "" {
 		log.Fatalf("%s", color.RedString("No API token provided"))
 	}
