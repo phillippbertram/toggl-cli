@@ -1,23 +1,31 @@
-package ls
+package list
 
 import (
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
 	"phillipp.io/toggl-cli/internal/service"
 	"phillipp.io/toggl-cli/internal/utils"
 )
 
-type LsOpts struct {
+type ListOpts struct {
 	timeService *service.TimeService
+
+	Client string
 }
 
-func NewCmdLs() *cobra.Command {
+func NewCmdList() *cobra.Command {
 
-	opts := LsOpts{}
+	opts := ListOpts{}
 
 	cmd := &cobra.Command{
-		Use:   "ls",
-		Short: "List all time entries for a time range",
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List all time entries for a time range",
+		Example: heredoc.Doc(`
+			$ toggl entries list
+			$ toggl entries ls
+		`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			var apiToken string
@@ -33,11 +41,15 @@ func NewCmdLs() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVarP(&opts.Client, "client", "c", "", "Client name")
+
 	return cmd
 }
 
-func lsRun(opts *LsOpts) error {
-	entries, err := opts.timeService.GetTimeEntries(&service.GetTimeEntriesOpts{})
+func lsRun(opts *ListOpts) error {
+	entries, err := opts.timeService.GetTimeEntries(&service.GetTimeEntriesOpts{
+		ClientName: &opts.Client,
+	})
 	if err != nil {
 		return err
 	}

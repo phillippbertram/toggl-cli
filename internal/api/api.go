@@ -58,6 +58,7 @@ func (a *Api) GetProjectById(workspaceId int, projectId int) (*ProjectDto, error
 	_, err := a.httpClient.R().
 		SetResult(project).
 		Get(fmt.Sprintf("/workspaces/%d/projects/%d", workspaceId, projectId))
+	fmt.Printf("<<< GetProjectById: %+v\n", project)
 	return project, err
 }
 

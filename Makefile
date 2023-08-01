@@ -2,8 +2,7 @@ BINARY_NAME := tgl
 BUILD_DIR := ./dist
 INSTALL_PATH := $(GOPATH)/bin/$(BINARY_NAME)
 
-
-default: build
+default: install
 
 build:
 	@echo "Building $(BINARY_NAME)..."

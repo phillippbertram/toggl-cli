@@ -19,6 +19,9 @@ type ProjectDto struct {
 
 	// Client ID. Can be null if client was not provided or client was later deleted
 	ClientId *int `json:"client_id"`
+
+	// Project color in hex
+	Color string `json:"color"`
 }
 
 type ClientDto struct {

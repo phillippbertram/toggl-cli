@@ -19,6 +19,21 @@ func GetStartOfMonth() time.Time {
 	return time.Date(year, month, 1, 0, 0, 0, 0, now.Location())
 }
 
+// TODO: make start of week configurable locally or get information from api?
+func GetStartOfWeek() time.Time {
+	now := time.Now()
+	year, month, day := now.Date()
+	weekday := now.Weekday()
+
+	// monday is start of week
+	offset := int(weekday - time.Monday)
+	if offset < 0 {
+		offset = 6
+	}
+
+	return time.Date(year, month, day-offset, 0, 0, 0, 0, now.Location())
+}
+
 func GetLastDayOfMonth() time.Time {
 	now := time.Now()
 	year, month, _ := now.Date()

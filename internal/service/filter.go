@@ -37,3 +37,13 @@ func IgnoreRunningEntries(entries []TimeEntry) []TimeEntry {
 	}
 	return filtered
 }
+
+func FilterByClientName(entries []TimeEntry, clientName string) []TimeEntry {
+	filtered := []TimeEntry{}
+	for _, entry := range entries {
+		if entry.Client != nil && entry.Client.Name == clientName {
+			filtered = append(filtered, entry)
+		}
+	}
+	return filtered
+}

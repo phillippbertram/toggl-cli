@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gookit/color"
 	"github.com/jedib0t/go-pretty/table"
 	"phillipp.io/toggl-cli/internal/utils"
 )
@@ -18,6 +19,7 @@ func PrettyPrintTimeEntries(enrichedEntries []TimeEntry) {
 
 	for _, rEntry := range enrichedEntries {
 		entry := rEntry.TimeEntry
+		projectColor := rEntry.Project.Color
 
 		var description string
 		if entry.Description != nil {
@@ -37,7 +39,7 @@ func PrettyPrintTimeEntries(enrichedEntries []TimeEntry) {
 		if entry.Stop != nil {
 			endDate = entry.Stop.Local().Format(time.DateTime)
 		} else {
-			endDate = "-"
+			endDate = "running"
 		}
 
 		var duration string
@@ -54,13 +56,15 @@ func PrettyPrintTimeEntries(enrichedEntries []TimeEntry) {
 			projectName = "<NO_PROJECT>"
 		}
 
+		cliColor := color.HEX(projectColor)
+
 		t.AppendRow(table.Row{
 			// entry.ID,
-			description,
-			projectName,
-			startDate,
-			endDate,
-			duration,
+			cliColor.Sprintf(description),
+			cliColor.Sprintf(projectName),
+			cliColor.Sprintf(startDate),
+			cliColor.Sprintf(endDate),
+			cliColor.Sprintf(duration),
 		})
 	}
 
