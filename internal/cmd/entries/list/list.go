@@ -1,6 +1,7 @@
 package list
 
 import (
+	"github.com/MakeNowJust/heredoc"
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
 	"phillipp.io/toggl-cli/internal/service"
@@ -21,6 +22,10 @@ func NewCmdList() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List all time entries for a time range",
+		Example: heredoc.Doc(`
+			$ toggl entries list
+			$ toggl entries ls
+		`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			var apiToken string

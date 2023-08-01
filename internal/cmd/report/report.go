@@ -174,7 +174,7 @@ func printGroup(group service.GroupedEntry) {
 	t := table.NewWriter()
 	t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Client/Project/Description", "Duration (hours)"})
+	t.AppendHeader(table.Row{"Client/Project/Group", "Duration (hours)"})
 
 	for key, duration := range aggregated {
 		t.AppendRow(table.Row{key, utils.FormatDuration(duration)})
