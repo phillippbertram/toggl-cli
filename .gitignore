@@ -123,5 +123,6 @@ dist/
 
 
 .env
-.tgl*
-!.tglcli.example.yml
+.gotgl
+!.gotgl.example.yml
+

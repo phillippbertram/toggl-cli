@@ -1,0 +1,8 @@
+version: 1
+report:
+  pricePerHour: 150
+  vat: 0.19
+  currency: EUR
+  start: "2023-09-28"
+logging:
+  level: verbose
