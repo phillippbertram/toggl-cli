@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gookit/color"
-	"github.com/jedib0t/go-pretty/table"
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 func PrettyPrintTimeEntries(enrichedEntries []TimeEntry) {

@@ -10,7 +10,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/fatih/color"
-	"github.com/jedib0t/go-pretty/table"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
 	"phillipp.io/toggl-cli/internal/config"
@@ -25,6 +25,7 @@ type ReportOpts struct {
 	apiToken    string
 	startDate   string
 	endDate     string
+	expanded    bool
 }
 
 func (opts *ReportOpts) print() {
@@ -63,6 +64,7 @@ func NewCmdReport() *cobra.Command {
 	cmd.Flags().BoolVarP(&opts.interactive, "interactive", "i", false, "Interactive mode")
 	cmd.Flags().StringVarP(&opts.startDate, "start", "s", "", "Start date (YYYY-MM-DD)")
 	cmd.Flags().StringVarP(&opts.endDate, "end", "e", "", "End date (YYYY-MM-DD)")
+	cmd.Flags().BoolVarP(&opts.expanded, "expanded", "x", false, "Show expanded report")
 
 	return cmd
 }
@@ -171,7 +173,7 @@ func reportRun(opts *ReportOpts) error {
 	}
 
 	for _, group := range groupedEntries {
-		printGroup(group)
+		printGroup(group, opts)
 
 		fmt.Println()
 		fmt.Println(strings.Repeat("-", 80))
@@ -182,7 +184,7 @@ func reportRun(opts *ReportOpts) error {
 
 }
 
-func printGroup(group service.GroupedEntry) {
+func printGroup(group service.GroupedEntry, opts *ReportOpts) {
 	entries := group.Entries
 	aggregated := aggregateEntries(entries)
 	statistics := service.GetStatistics(entries)
@@ -206,21 +208,31 @@ func printGroup(group service.GroupedEntry) {
 	t.AppendHeader(table.Row{"Client/Project/Group", "Duration (hours)", fmt.Sprintf("Price (%s)", config.Report.Currency)})
 	t.SetTitle(title)
 
-	for key, duration := range aggregated {
-		t.AppendRow(table.Row{key, utils.FormatDuration(duration)})
+	for key, group := range aggregated {
+		t.AppendRow(table.Row{key, utils.FormatDuration(group.Duration)})
+
+		if opts.expanded {
+			for _, entry := range group.Entries {
+				// show row with description and duration
+				t.AppendRow(table.Row{*entry.TimeEntry.Description, utils.FormatDuration(time.Duration(entry.TimeEntry.Duration) * time.Second)})
+			}
+			t.AppendSeparator()
+		}
 	}
 
 	t.AppendFooter(table.Row{"Total", utils.FormatDuration(statistics.TotalDuration), fmt.Sprintf("%.2f€ /  %.2f€", estimatedPrice, estimatedPriceIncldVat)})
-
-	// TODO add sorting, this is not working properly
-	t.SortBy([]table.SortBy{
-		{Name: "Client/Project/Group", Mode: table.Asc},
-	})
 	t.Render()
 }
 
-func aggregateEntries(entries []service.TimeEntry) map[string]time.Duration {
-	aggregated := map[string]time.Duration{}
+type GroupedEntry struct {
+	Project *api.ProjectDto
+	Client  *api.ClientDto
+	Entries []service.TimeEntry
+	time.Duration
+}
+
+func aggregateEntries(entries []service.TimeEntry) map[string]GroupedEntry {
+	aggregated := map[string]GroupedEntry{}
 	for _, eentry := range entries {
 		entry := eentry.TimeEntry
 		project := eentry.Project
@@ -245,7 +257,12 @@ func aggregateEntries(entries []service.TimeEntry) map[string]time.Duration {
 		keys = append(keys, group)
 
 		key := strings.Join(keys, "/")
-		aggregated[key] += time.Duration(entry.Duration) * time.Second
+		aggregated[key] = GroupedEntry{
+			Project:  project,
+			Client:   client,
+			Entries:  append(aggregated[key].Entries, eentry),
+			Duration: aggregated[key].Duration + time.Duration(entry.Duration)*time.Second,
+		}
 	}
 	return aggregated
 }
