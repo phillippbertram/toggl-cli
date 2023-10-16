@@ -13,6 +13,7 @@ import (
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/spf13/cobra"
 	"phillipp.io/toggl-cli/internal/api"
+	"phillipp.io/toggl-cli/internal/config"
 	"phillipp.io/toggl-cli/internal/service"
 	"phillipp.io/toggl-cli/internal/utils"
 )
@@ -59,6 +60,7 @@ func NewCmdReport() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVarP(&opts.interactive, "interactive", "i", false, "Interactive mode")
 	cmd.Flags().StringVarP(&opts.startDate, "start", "s", "", "Start date (YYYY-MM-DD)")
 	cmd.Flags().StringVarP(&opts.endDate, "end", "e", "", "End date (YYYY-MM-DD)")
 
@@ -86,19 +88,30 @@ func interactiveCheckForApiToken(cmd *cobra.Command, opts *ReportOpts) {
 }
 
 func interactiveCheckForStartDate(opts *ReportOpts) {
+	// was set via flag?
 	if opts.startDate != "" {
+		return
+	}
+
+	// was set via config?
+	config := config.GetConfig()
+	if config.Report.Start != nil && *config.Report.Start != "" {
+		opts.startDate = *config.Report.Start
 		return
 	}
 
 	defaultStartDate := utils.GetStartOfWeek().Local().Format(utils.DATE_FORMAT)
 
-	prompt := &survey.Input{
-		Message: fmt.Sprintf("Please enter the start date (YYYY-MM-DD) [%s]:", defaultStartDate),
-	}
-	err := survey.AskOne(prompt, &opts.startDate)
-	if err != nil {
-		if err == terminal.InterruptErr {
-			log.Fatal()
+	// ask for it
+	if opts.interactive {
+		prompt := &survey.Input{
+			Message: fmt.Sprintf("Please enter the start date (YYYY-MM-DD) [%s]:", defaultStartDate),
+		}
+		err := survey.AskOne(prompt, &opts.startDate)
+		if err != nil {
+			if err == terminal.InterruptErr {
+				log.Fatal()
+			}
 		}
 	}
 
@@ -108,19 +121,22 @@ func interactiveCheckForStartDate(opts *ReportOpts) {
 }
 
 func interactiveCheckForEndDate(opts *ReportOpts) {
+
 	if opts.endDate != "" {
 		return
 	}
 
 	today := utils.GetEndOfTodayDay().Local().Format(time.RFC3339)
 
-	prompt := &survey.Input{
-		Message: fmt.Sprintf("Please enter the end date (YYYY-MM-DD) [%s]:", today),
-	}
-	err := survey.AskOne(prompt, &opts.endDate)
-	if err != nil {
-		if err == terminal.InterruptErr {
-			log.Fatal()
+	if opts.interactive {
+		prompt := &survey.Input{
+			Message: fmt.Sprintf("Please enter the end date (YYYY-MM-DD) [%s]:", today),
+		}
+		err := survey.AskOne(prompt, &opts.endDate)
+		if err != nil {
+			if err == terminal.InterruptErr {
+				log.Fatal()
+			}
 		}
 	}
 
@@ -170,21 +186,35 @@ func printGroup(group service.GroupedEntry) {
 	entries := group.Entries
 	aggregated := aggregateEntries(entries)
 	statistics := service.GetStatistics(entries)
+	config := config.GetConfig()
+	estimatedPrice := statistics.TotalDuration.Minutes() * config.Report.PricePerHour / 60
+	estimatedPriceIncldVat := estimatedPrice * (1 + config.Report.Vat)
+
+	var title string = ""
+	if statistics.EarliestEntry != nil && statistics.LatestEntry != nil {
+		timeRangeDays := utils.GetDaysBetween(statistics.EarliestEntry.TimeEntry.Start, statistics.LatestEntry.TimeEntry.Start)
+		title = fmt.Sprintf("Range: %s - %s (%d days)\n\n",
+			statistics.EarliestEntry.TimeEntry.Start.Local().Format(time.DateTime),
+			statistics.LatestEntry.TimeEntry.Start.Local().Format(time.DateTime),
+			len(timeRangeDays),
+		)
+	}
 
 	t := table.NewWriter()
 	t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Client/Project/Group", "Duration (hours)"})
+	t.AppendHeader(table.Row{"Client/Project/Group", "Duration (hours)", fmt.Sprintf("Price (%s)", config.Report.Currency)})
+	t.SetTitle(title)
 
 	for key, duration := range aggregated {
 		t.AppendRow(table.Row{key, utils.FormatDuration(duration)})
 	}
 
-	t.AppendFooter(table.Row{"Total", utils.FormatDuration(statistics.TotalDuration)})
+	t.AppendFooter(table.Row{"Total", utils.FormatDuration(statistics.TotalDuration), fmt.Sprintf("%.2f€ /  %.2f€", estimatedPrice, estimatedPriceIncldVat)})
 
 	// TODO add sorting, this is not working properly
 	t.SortBy([]table.SortBy{
-		{Name: "Duration (hours)", Mode: table.Asc},
+		{Name: "Client/Project/Group", Mode: table.Asc},
 	})
 	t.Render()
 }

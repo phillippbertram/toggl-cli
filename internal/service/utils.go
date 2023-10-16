@@ -1,14 +1,12 @@
 package service
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/gookit/color"
 	"github.com/jedib0t/go-pretty/table"
-	"phillipp.io/toggl-cli/internal/utils"
 )
 
 func PrettyPrintTimeEntries(enrichedEntries []TimeEntry) {
@@ -79,15 +77,6 @@ func GetStatistics(entries []TimeEntry) *TimeStatistics {
 
 	earliestEntry := GetEarliestEntry(entries)
 	latestEntry := GetLatestEntry(entries)
-
-	if earliestEntry != nil && latestEntry != nil {
-		timeRangeDays := utils.GetDaysBetween(earliestEntry.TimeEntry.Start, latestEntry.TimeEntry.Start)
-		fmt.Printf("Time Entries Range: %s - %s (%d days)\n\n",
-			earliestEntry.TimeEntry.Start.Local().Format(time.DateTime),
-			latestEntry.TimeEntry.Start.Local().Format(time.DateTime),
-			len(timeRangeDays),
-		)
-	}
 
 	// group by description
 	aggregated := map[string]time.Duration{}

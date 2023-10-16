@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -12,6 +10,7 @@ import (
 	"phillipp.io/toggl-cli/internal/cmd/report"
 	"phillipp.io/toggl-cli/internal/cmd/start"
 	"phillipp.io/toggl-cli/internal/cmd/stop"
+	"phillipp.io/toggl-cli/internal/config"
 )
 
 func NewCmdRoot() *cobra.Command {
@@ -37,36 +36,16 @@ func NewCmdRoot() *cobra.Command {
 	return cmd
 }
 
-type LoggingConfig struct {
-	Level string `mapstructure:"level"`
-}
-
-type Config struct {
-	Logging LoggingConfig `mapstructure:"logging"`
-}
-
 func initViper() {
 	// 		home, err := os.UserHomeDir()
 	// 		cobra.CheckErr(err)
 
-	viper.SetConfigFile(".tglcli")
+	viper.SetConfigFile(".gotgl")
 	viper.SetConfigType("yml")
 
-	viper.AddConfigPath(".")
+	viper.AddConfigPath(".") // Search for config in the current directory
 	viper.AddConfigPath("$HOME")
+	viper.AutomaticEnv() // Read from environment variables
 
-	viper.AutomaticEnv()
-
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	} else {
-		fmt.Printf("Error reading config file: %v\n", err)
-	}
-
-	var config Config
-	if err := viper.Unmarshal(&config); err != nil {
-		fmt.Printf("Error unmarshalling config: %v\n", err)
-	} else {
-		fmt.Printf("Config loaded: %+v\n", config)
-	}
+	config.LoadConfigWithViper()
 }
