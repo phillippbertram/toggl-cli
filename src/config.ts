@@ -7,6 +7,11 @@ import {parse, stringify} from 'yaml';
 import {z} from 'zod';
 
 import {TglError} from './errors.js';
+import {
+  RoundingConfigSchema,
+  mergeRoundingConfig,
+  type RoundingConfig,
+} from './rounding.js';
 
 const PROJECT_NAME = 'tgl-cli';
 const CONFIG_FILE_NAME = 'config.yaml';
@@ -24,6 +29,7 @@ const AppConfigSchema = z
     workspaceName: z.string().min(1).optional(),
     credentialAccount: z.string().min(1).optional(),
     projectId: positiveInteger.nullable().optional(),
+    rounding: RoundingConfigSchema.optional(),
   })
   .strict();
 
@@ -31,6 +37,7 @@ const LocalConfigSchema = z
   .object({
     workspaceId: positiveInteger.optional(),
     projectId: positiveInteger.nullable().optional(),
+    rounding: RoundingConfigSchema.optional(),
   })
   .strict();
 
@@ -77,6 +84,12 @@ export class ConfigStore {
     if (localConfig.projectId !== undefined) {
       resolved.projectId = localConfig.projectId;
     }
+    if (localConfig.rounding !== undefined) {
+      resolved.rounding = mergeRoundingConfig(
+        globalConfig.rounding,
+        localConfig.rounding,
+      );
+    }
 
     return AppConfigSchema.parse(resolved);
   }
@@ -89,6 +102,14 @@ export class ConfigStore {
 
   public setProject(projectId: number | null): void {
     this.update({projectId});
+  }
+
+  public setRounding(rounding: RoundingConfig): void {
+    this.update({rounding});
+  }
+
+  public loadGlobalRounding(): RoundingConfig | undefined {
+    return this.loadGlobal().rounding;
   }
 
   public clearIdentity(): void {

@@ -7,6 +7,7 @@ import pc from 'picocolors';
 import {
   authStatusCommand,
   configureProjectCommand,
+  configureRoundingCommand,
   configureWorkspaceCommand,
   loginCommand,
   logoutCommand,
@@ -16,6 +17,8 @@ import {
   statusCommand,
   stopCommand,
   type CommandContext,
+  type StartOptions,
+  type StopOptions,
 } from './commands.js';
 import {ConfigStore} from './config.js';
 import {CredentialStore} from './credentials.js';
@@ -46,6 +49,27 @@ const commandPath = (command: Command): string => {
   }
   return names.join(' ');
 };
+
+const addRoundingOptions = (command: Command): Command =>
+  command
+    .addOption(
+      new Option('--round <minutes>', 'round to 1, 5, or 15 minutes').choices([
+        '1',
+        '5',
+        '15',
+      ]),
+    )
+    .addOption(
+      new Option(
+        '--round-mode <mode>',
+        'round to nearest, always up, or always down',
+      ).choices(['nearest', 'up', 'down']),
+    )
+    .addOption(
+      new Option('--no-round', 'skip configured rounding').conflicts(
+        'roundMode',
+      ),
+    );
 
 const program = new Command();
 program.configureHelp({
@@ -85,24 +109,18 @@ program
     await launchTui(context);
   });
 
-const start = program
-  .command('start')
-  .description('Start a new timer')
-  .argument('[description...]', 'time entry description')
-  .option('-p, --project <project>', 'project ID or name')
-  .option('--no-project', 'start without a project')
-  .option('--replace', 'stop an active timer without confirmation')
-  .addOption(new Option('-y, --yes').hideHelp())
-  .action(
-    async (
-      description: string[],
-      options: {
-        project?: string | false;
-        replace?: boolean;
-        yes?: boolean;
-      },
-    ) => startCommand(context, description, options),
-  );
+const start = addRoundingOptions(
+  program
+    .command('start')
+    .description('Start a new timer')
+    .argument('[description...]', 'time entry description')
+    .option('-p, --project <project>', 'project ID or name')
+    .option('--no-project', 'start without a project')
+    .option('--replace', 'stop an active timer without confirmation')
+    .addOption(new Option('-y, --yes').hideHelp()),
+).action(async (description: string[], options: StartOptions) =>
+  startCommand(context, description, options),
+);
 start.addHelpText(
   'after',
   `
@@ -116,24 +134,18 @@ successfully used project is reused. If the same timer is already running, the
 command succeeds without restarting it.`,
 );
 
-const resume = program
-  .command('resume')
-  .description('Resume the latest or a matching stopped entry')
-  .argument('[query...]', 'description or reference to find')
-  .option('-p, --project <project>', 'override project by ID or name')
-  .option('--no-project', 'resume without a project')
-  .option('--replace', 'stop an active timer without confirmation')
-  .addOption(new Option('-y, --yes').hideHelp())
-  .action(
-    async (
-      query: string[],
-      options: {
-        project?: string | false;
-        replace?: boolean;
-        yes?: boolean;
-      },
-    ) => resumeCommand(context, query, options),
-  );
+const resume = addRoundingOptions(
+  program
+    .command('resume')
+    .description('Resume the latest or a matching stopped entry')
+    .argument('[query...]', 'description or reference to find')
+    .option('-p, --project <project>', 'override project by ID or name')
+    .option('--no-project', 'resume without a project')
+    .option('--replace', 'stop an active timer without confirmation')
+    .addOption(new Option('-y, --yes').hideHelp()),
+).action(async (query: string[], options: StartOptions) =>
+  resumeCommand(context, query, options),
+);
 resume.addHelpText(
   'after',
   `
@@ -146,10 +158,9 @@ Without a query, tgl resumes the most recently stopped entry from the last 90
 days. Its description and project are preserved unless explicitly overridden.`,
 );
 
-program
-  .command('stop')
-  .description('Stop the running timer')
-  .action(async () => stopCommand(context));
+addRoundingOptions(
+  program.command('stop').description('Stop the running timer'),
+).action(async (options: StopOptions) => stopCommand(context, options));
 
 program
   .command('status')
@@ -190,6 +201,10 @@ configure
   .command('project')
   .description('Choose the project for new timers')
   .action(async () => configureProjectCommand(context));
+configure
+  .command('rounding')
+  .description('Configure global start and stop rounding')
+  .action(async () => configureRoundingCommand(context));
 configure
   .command('path')
   .description('Print the global and local config paths')

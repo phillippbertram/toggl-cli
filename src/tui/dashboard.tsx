@@ -18,6 +18,7 @@ import {
   type Project,
   type TimeEntry,
 } from '../models.js';
+import {effectiveRounding, type RoundingAdjustment} from '../rounding.js';
 import {loadHistory, searchHistory} from '../services/history.js';
 import {activeProjects} from '../services/projects.js';
 import {
@@ -200,6 +201,7 @@ export const Dashboard = ({
       setView('busy');
       setMessage(undefined);
       try {
+        const rounding = effectiveRounding(context.config.load().rounding);
         const result = await startTimer({
           client: session.client,
           workspaceId: session.workspaceId,
@@ -221,6 +223,8 @@ export const Dashboard = ({
             return Promise.resolve(false);
           },
           forceReplace: request.confirmedTimerId !== undefined,
+          startRounding: rounding.start,
+          stopRounding: rounding.stop,
         });
         context.config.setProject(request.projectId);
         setMessage({
@@ -228,8 +232,8 @@ export const Dashboard = ({
           text: result.alreadyRunning
             ? `Already tracking ${entrySummary(result.entry, true)}.`
             : result.previous
-              ? `Stopped ${entrySummary(result.previous, true)}. ${request.verb} ${entrySummary(result.entry)}.`
-              : `${request.verb} ${entrySummary(result.entry)}.`,
+              ? `Stopped ${entrySummary(result.previous, true)}${roundingSuffix(result.previousRounding, session.user.timezone)}. ${request.verb} ${entrySummary(result.entry)}${roundingSuffix(result.startRounding, session.user.timezone)}.`
+              : `${request.verb} ${entrySummary(result.entry)}${roundingSuffix(result.startRounding, session.user.timezone)}.`,
         });
         setPending(undefined);
         setNewDescription('');
@@ -346,12 +350,13 @@ export const Dashboard = ({
     setView('busy');
     setMessage(undefined);
     try {
-      const stopped = await stopCurrentTimer(session.client);
+      const rounding = effectiveRounding(context.config.load().rounding);
+      const stopped = await stopCurrentTimer(session.client, rounding.stop);
       setMessage(
         stopped
           ? {
               variant: 'success',
-              text: `Stopped ${entrySummary(stopped, true)}.`,
+              text: `Stopped ${entrySummary(stopped.entry, true)}${roundingSuffix(stopped.rounding, session.user.timezone)}.`,
             }
           : {variant: 'info', text: 'No timer is running.'},
       );
@@ -361,7 +366,7 @@ export const Dashboard = ({
       setMessage({variant: 'error', text: errorMessage(cause)});
       setView('dashboard');
     }
-  }, [refreshAll, session]);
+  }, [context, refreshAll, session]);
 
   useInput(
     (inputValue, key) => {
@@ -574,6 +579,22 @@ const entrySummary = (entry: TimeEntry, includeDuration = false): string =>
   `“${timeEntryDescription(entry)}” · ${timeEntryProjectLabel(entry)}${
     includeDuration ? ` · ${formatDuration(trackedSeconds(entry))}` : ''
   }`;
+
+const roundingSuffix = (
+  adjustment: RoundingAdjustment | undefined,
+  timezone: string,
+): string => {
+  if (!adjustment) return '';
+
+  const boundary = adjustment.boundary === 'start' ? 'Start' : 'Stop';
+  const original = DateTime.fromISO(adjustment.original)
+    .setZone(timezone)
+    .toFormat('HH:mm');
+  const rounded = DateTime.fromISO(adjustment.rounded)
+    .setZone(timezone)
+    .toFormat('HH:mm');
+  return ` · ${boundary} rounded from ${original} to ${rounded}`;
+};
 
 const newTimerProjectLabel = (
   context: CommandContext,

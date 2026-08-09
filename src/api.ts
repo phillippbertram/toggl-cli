@@ -25,8 +25,6 @@ type RequestResult<T> = {
   headers: Headers;
 };
 
-const EmptyResponseSchema = z.unknown().transform(() => undefined);
-
 export class TogglApiClient {
   readonly #authorization: string;
   readonly #apiBaseUrl: string;
@@ -43,7 +41,7 @@ export class TogglApiClient {
   }
 
   async #request<T>(
-    method: 'GET' | 'POST' | 'PATCH',
+    method: 'GET' | 'POST' | 'PATCH' | 'PUT',
     url: URL,
     schema: z.ZodType<T>,
     body?: unknown,
@@ -177,12 +175,13 @@ export class TogglApiClient {
     workspaceId: number;
     description: string;
     projectId: number | null;
+    start?: string;
   }): Promise<TimeEntry> {
     const body: Record<string, unknown> = {
       created_with: 'tgl',
       description: input.description,
       duration: -1,
-      start: new Date().toISOString(),
+      start: input.start ?? new Date().toISOString(),
       workspace_id: input.workspaceId,
     };
     if (input.projectId !== null) {
@@ -201,19 +200,42 @@ export class TogglApiClient {
     ).data;
   }
 
-  public async stopTimeEntry(entry: TimeEntry): Promise<void> {
+  public async stopTimeEntry(entry: TimeEntry): Promise<TimeEntry> {
     const workspaceId = entry.workspace_id ?? entry.wid;
     if (workspaceId === undefined) {
       throw new TogglApiError('The running time entry has no workspace ID.');
     }
 
-    await this.#request(
-      'PATCH',
-      new URL(
-        `${this.#apiBaseUrl}/workspaces/${workspaceId}/time_entries/${entry.id}/stop`,
-      ),
-      EmptyResponseSchema,
-    );
+    return (
+      await this.#request(
+        'PATCH',
+        new URL(
+          `${this.#apiBaseUrl}/workspaces/${workspaceId}/time_entries/${entry.id}/stop`,
+        ),
+        TimeEntrySchema,
+      )
+    ).data;
+  }
+
+  public async updateTimeEntryStop(
+    entry: TimeEntry,
+    stop: string,
+  ): Promise<TimeEntry> {
+    const workspaceId = entry.workspace_id ?? entry.wid;
+    if (workspaceId === undefined) {
+      throw new TogglApiError('The stopped time entry has no workspace ID.');
+    }
+
+    return (
+      await this.#request(
+        'PUT',
+        new URL(
+          `${this.#apiBaseUrl}/workspaces/${workspaceId}/time_entries/${entry.id}`,
+        ),
+        TimeEntrySchema,
+        {stop, workspace_id: workspaceId},
+      )
+    ).data;
   }
 
   public async getDetailedReport(input: {

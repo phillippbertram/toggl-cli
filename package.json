@@ -17,7 +17,7 @@
   "packageManager": "pnpm@11.15.1",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm build && pnpm test:config",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm build && pnpm test",
     "dev": "pnpm build && node dist/cli.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -25,8 +25,8 @@
     "global:remove": "pnpm remove --global tgl",
     "lint": "eslint .",
     "start": "node dist/cli.js",
-    "test": "pnpm build && pnpm test:config",
-    "test:config": "node --test test/config.test.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -52,6 +52,7 @@
     "eslint": "^10.8.1",
     "prettier": "^3.9.6",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.66.0"
+    "typescript-eslint": "^8.66.0",
+    "vitest": "^4.1.10"
   }
 }

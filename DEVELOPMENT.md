@@ -16,8 +16,8 @@ pnpm dev
 ```
 
 `pnpm check` runs the TypeScript typecheck, ESLint, Prettier check, production
-build, and the focused configuration tests. Run the tests independently with
-`pnpm test`.
+build, and the full Vitest suite. Run the tests independently with `pnpm test`
+or keep Vitest running during development with `pnpm test:watch`.
 
 ## Local Toggl API with Mockoon
 
@@ -91,6 +91,7 @@ CLI from another directory before using the real Toggl API again.
 | `GET`   | `/api/v9/me/time_entries`                                        | `responses/time-entries.json`       |
 | `POST`  | `/api/v9/workspaces/:workspaceId/time_entries`                   | `responses/create-time-entry.json`  |
 | `PATCH` | `/api/v9/workspaces/:workspaceId/time_entries/:timeEntryId/stop` | `responses/stop-time-entry.json`    |
+| `PUT`   | `/api/v9/workspaces/:workspaceId/time_entries/:timeEntryId`      | `responses/update-time-entry.json`  |
 | `POST`  | `/reports/api/v3/workspace/:workspaceId/search/time_entries`     | `responses/detailed-report.json`    |
 
 The detailed report represents August 2026 in the `Europe/Berlin` timezone. Do
@@ -107,6 +108,7 @@ Mockoon includes alternative responses for empty states:
 
 Select an alternative response in Mockoon when testing the corresponding state.
 
-The mock is intentionally static. Start and stop requests return realistic
-responses, but they do not modify subsequent responses. Switch the current time
-entry route between its regular and empty response when testing both states.
+The mock is intentionally static. Start, stop, and rounded update requests
+return realistic responses, but they do not modify subsequent responses.
+Switch the current time entry route between its regular and empty response when
+testing both states.

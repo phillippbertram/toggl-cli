@@ -1,0 +1,12 @@
+{
+  "id": 82000,
+  "workspace_id": 424242,
+  "project_id": 9001,
+  "project_name": "Client Portal",
+  "description": "LOOP-132: Build activity dashboard",
+  "start": "2026-08-09T11:15:00+02:00",
+  "stop": "2026-08-09T14:30:00+02:00",
+  "duration": 11700,
+  "created_with": "tgl",
+  "tags": []
+}

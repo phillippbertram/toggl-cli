@@ -20,7 +20,7 @@
           "body": "{}",
           "latency": 0,
           "statusCode": 200,
-          "label": "Jamie Taylor",
+          "label": "Phillipp Bertram",
           "headers": [],
           "bodyType": "FILE",
           "filePath": "responses/me.json",
@@ -51,7 +51,7 @@
           "body": "[]",
           "latency": 0,
           "statusCode": 200,
-          "label": "Northstar Studio",
+          "label": "Infinite Loop Studio",
           "headers": [],
           "bodyType": "FILE",
           "filePath": "responses/workspaces.json",
@@ -264,6 +264,37 @@
       "streamingInterval": 0
     },
     {
+      "uuid": "11111111-1111-4111-8111-000000000009",
+      "type": "http",
+      "documentation": "Return a time entry with its rounded stop time.",
+      "method": "put",
+      "endpoint": "api/v9/workspaces/:workspaceId/time_entries/:timeEntryId",
+      "responses": [
+        {
+          "uuid": "21111111-1111-4111-8111-000000000009",
+          "body": "{}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Updated time entry",
+          "headers": [],
+          "bodyType": "FILE",
+          "filePath": "responses/update-time-entry.json",
+          "databucketID": "",
+          "sendFileAsBody": true,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": true,
+          "fallbackTo404": true,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null,
+      "streamingMode": null,
+      "streamingInterval": 0
+    },
+    {
       "uuid": "11111111-1111-4111-8111-000000000008",
       "type": "http",
       "documentation": "Return the August 2026 detailed report or the optional empty state.",
@@ -342,6 +373,10 @@
     {
       "type": "route",
       "uuid": "11111111-1111-4111-8111-000000000007"
+    },
+    {
+      "type": "route",
+      "uuid": "11111111-1111-4111-8111-000000000009"
     },
     {
       "type": "route",

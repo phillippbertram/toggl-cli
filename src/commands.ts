@@ -16,6 +16,16 @@ import {
   type Workspace,
 } from './models.js';
 import {info, printReport, success, warning} from './output.js';
+import {
+  effectiveRounding,
+  resolveRoundingOverride,
+  type RoundingAdjustment,
+  type RoundingConfig,
+  type RoundingMode,
+  type RoundingMinutes,
+  type RoundingOptions,
+  type RoundingRule,
+} from './rounding.js';
 import {loadHistory, searchHistory} from './services/history.js';
 import {activeProjects, findProject} from './services/projects.js';
 import {formatDuration, loadMonthReport, monthKey} from './services/report.js';
@@ -32,11 +42,13 @@ import {
   type StartTimerResult,
 } from './services/tracking.js';
 
-export type StartOptions = {
+export type StartOptions = RoundingOptions & {
   project?: string | false;
   replace?: boolean;
   yes?: boolean;
 };
+
+export type StopOptions = RoundingOptions;
 
 export type ReportOptions = {
   current?: boolean;
@@ -124,6 +136,29 @@ export const configureProjectCommand = async (
   );
 };
 
+export const configureRoundingCommand = async (
+  context: CommandContext,
+): Promise<void> => {
+  const configured = effectiveRounding(context.config.loadGlobalRounding());
+  const start = await chooseRoundingRule('start', configured.start);
+  const stop = await chooseRoundingRule('stop', configured.stop);
+  const rounding: RoundingConfig =
+    start || stop
+      ? {
+          ...(start && {start}),
+          ...(stop && {stop}),
+        }
+      : false;
+
+  context.config.setRounding(rounding);
+  success(`Global rounding set to ${roundingConfigSummary(rounding)}.`);
+  if (context.config.localPath) {
+    warning(
+      `Local rounding overrides from ${context.config.localPath} may still apply.`,
+    );
+  }
+};
+
 export const startCommand = async (
   context: CommandContext,
   descriptionParts: string[],
@@ -150,6 +185,7 @@ export const startCommand = async (
     options.project,
     context.config.load().projectId ?? null,
   );
+  const configuredRounding = effectiveRounding(context.config.load().rounding);
   const result = await startTimer({
     client: session.client,
     workspaceId: session.workspaceId,
@@ -158,9 +194,11 @@ export const startCommand = async (
     confirmSwitch: (current) =>
       confirmTimerSwitch(current, options.replace || options.yes),
     forceReplace: options.replace || options.yes,
+    startRounding: resolveRoundingOverride(configuredRounding.start, options),
+    stopRounding: configuredRounding.stop,
   });
   context.config.setProject(projectId);
-  printStartResult(result, 'Started', projects);
+  printStartResult(result, 'Started', projects, session.user.timezone);
 };
 
 export const resumeCommand = async (
@@ -200,6 +238,7 @@ export const resumeCommand = async (
     source,
     options.project,
   );
+  const configuredRounding = effectiveRounding(context.config.load().rounding);
   const result = await startTimer({
     client: session.client,
     workspaceId: session.workspaceId,
@@ -208,19 +247,30 @@ export const resumeCommand = async (
     confirmSwitch: (current) =>
       confirmTimerSwitch(current, options.replace || options.yes),
     forceReplace: options.replace || options.yes,
+    startRounding: resolveRoundingOverride(configuredRounding.start, options),
+    stopRounding: configuredRounding.stop,
   });
   context.config.setProject(projectId);
-  printStartResult(result, 'Resumed', projects);
+  printStartResult(result, 'Resumed', projects, session.user.timezone);
 };
 
-export const stopCommand = async (context: CommandContext): Promise<void> => {
+export const stopCommand = async (
+  context: CommandContext,
+  options: StopOptions = {},
+): Promise<void> => {
   const session = await context.sessions.create();
-  const stopped = await stopCurrentTimer(session.client);
+  const configured = effectiveRounding(context.config.load().rounding);
+  const stopped = await stopCurrentTimer(
+    session.client,
+    resolveRoundingOverride(configured.stop, options),
+  );
   if (!stopped) {
     info('No timer is running.');
     return;
   }
-  success(`Stopped ${entrySummary(stopped, [], true)}.`);
+  success(
+    `Stopped ${entrySummary(stopped.entry, [], true)}${roundingSuffix(stopped.rounding, session.user.timezone)}.`,
+  );
 };
 
 export const statusCommand = async (context: CommandContext): Promise<void> => {
@@ -314,6 +364,38 @@ const chooseProject = async (
     pageSize: 12,
   });
 
+const chooseRoundingRule = async (
+  boundary: 'start' | 'stop',
+  configured?: RoundingRule,
+): Promise<RoundingRule | undefined> => {
+  const enabled = await confirm({
+    message: `Round timer ${boundary} times?`,
+    default: configured !== undefined,
+  });
+  if (!enabled) {
+    return undefined;
+  }
+
+  const minutes = await select<RoundingMinutes>({
+    message: `${boundary === 'start' ? 'Start' : 'Stop'} interval`,
+    choices: [1, 5, 15].map((value) => ({
+      name: `${value} minute${value === 1 ? '' : 's'}`,
+      value: value as RoundingMinutes,
+    })),
+    default: configured?.minutes ?? 15,
+  });
+  const mode = await select<RoundingMode>({
+    message: `${boundary === 'start' ? 'Start' : 'Stop'} direction`,
+    choices: [
+      {name: 'Nearest', value: 'nearest'},
+      {name: 'Always up', value: 'up'},
+      {name: 'Always down', value: 'down'},
+    ],
+    default: configured?.mode ?? 'nearest',
+  });
+  return {minutes, mode};
+};
+
 const resolveProjectOption = async (
   projects: Project[],
   option: string | false | undefined,
@@ -406,6 +488,7 @@ const printStartResult = (
   result: StartTimerResult,
   verb: 'Started' | 'Resumed',
   projects: Project[],
+  timezone: string,
 ): void => {
   if (result.alreadyRunning) {
     success(`Already tracking ${entrySummary(result.entry, projects, true)}.`);
@@ -413,9 +496,44 @@ const printStartResult = (
   }
 
   if (result.previous) {
-    success(`Stopped ${entrySummary(result.previous, projects, true)}.`);
+    success(
+      `Stopped ${entrySummary(result.previous, projects, true)}${roundingSuffix(result.previousRounding, timezone)}.`,
+    );
   }
-  success(`${verb} ${entrySummary(result.entry, projects)}.`);
+  success(
+    `${verb} ${entrySummary(result.entry, projects)}${roundingSuffix(result.startRounding, timezone)}.`,
+  );
+};
+
+const roundingSuffix = (
+  adjustment: RoundingAdjustment | undefined,
+  timezone: string,
+): string => {
+  if (!adjustment) {
+    return '';
+  }
+
+  const boundary = adjustment.boundary === 'start' ? 'Start' : 'Stop';
+  const original = DateTime.fromISO(adjustment.original)
+    .setZone(timezone)
+    .toFormat('HH:mm');
+  const rounded = DateTime.fromISO(adjustment.rounded)
+    .setZone(timezone)
+    .toFormat('HH:mm');
+  return ` · ${boundary} rounded from ${original} to ${rounded}`;
+};
+
+const roundingConfigSummary = (rounding: RoundingConfig): string => {
+  if (rounding === false) {
+    return 'disabled';
+  }
+
+  return (['start', 'stop'] as const)
+    .flatMap((boundary) => {
+      const rule = rounding[boundary];
+      return rule ? [`${boundary} ${rule.minutes}m ${rule.mode}`] : [];
+    })
+    .join(', ');
 };
 
 const entrySummary = (
