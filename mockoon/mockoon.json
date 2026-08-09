@@ -20,7 +20,7 @@
           "body": "{}",
           "latency": 0,
           "statusCode": 200,
-          "label": "Phillipp Bertram",
+          "label": "Jamie Taylor",
           "headers": [],
           "bodyType": "FILE",
           "filePath": "responses/me.json",
@@ -42,7 +42,7 @@
     {
       "uuid": "11111111-1111-4111-8111-000000000002",
       "type": "http",
-      "documentation": "Return the Infinite Loop Labs workspace.",
+      "documentation": "Return the Northstar Studio workspace.",
       "method": "get",
       "endpoint": "api/v9/me/workspaces",
       "responses": [
@@ -51,7 +51,7 @@
           "body": "[]",
           "latency": 0,
           "statusCode": 200,
-          "label": "Infinite Loop Labs",
+          "label": "Northstar Studio",
           "headers": [],
           "bodyType": "FILE",
           "filePath": "responses/workspaces.json",
