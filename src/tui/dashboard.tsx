@@ -36,7 +36,6 @@ import {
   Header,
   HistoryPanel,
   ReportPanel,
-  TimerPanel,
 } from './components/dashboard-panels.js';
 import {Help} from './components/help.js';
 import {Form, Screen} from './components/layout.js';
@@ -97,15 +96,14 @@ export const Dashboard = ({
 
   const reportMonth = monthKey(session.user.timezone, monthOffset);
   const isWide = columns >= 100;
+  const compactHeader = columns < 80;
   const panelFrameRows = 3;
   const stackedPanelGapRows = 1;
   const footerRows = columns >= 120 ? 1 : 2;
   const screenPaddingRows = 2;
-  const headerRows = 2;
-  const timerRows = 4;
+  const headerRows = 5;
   const messageRows = message ? 2 : 0;
-  const chromeRows =
-    screenPaddingRows + headerRows + timerRows + messageRows + footerRows;
+  const chromeRows = screenPaddingRows + headerRows + messageRows + footerRows;
   const availableBodyRows = Math.max(4, rows - chromeRows);
   const compactReportContentRows = report.data
     ? 2 + Math.min(5, report.data.byReference.length)
@@ -184,13 +182,17 @@ export const Dashboard = ({
   }, [refreshAll]);
 
   useEffect(() => {
-    const clock = setInterval(() => setNow(Date.now()), 1000);
     const remote = setInterval(() => void refreshCurrent(), 60_000);
-    return () => {
-      clearInterval(clock);
-      clearInterval(remote);
-    };
+    return () => clearInterval(remote);
   }, [refreshCurrent]);
+
+  useEffect(() => {
+    if (view !== 'dashboard' || !current.data) return;
+
+    setNow(Date.now());
+    const clock = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(clock);
+  }, [current.data, view]);
 
   const finishStart = useCallback(
     async (request: PendingStart) => {
@@ -524,8 +526,10 @@ export const Dashboard = ({
           context.config.load().workspaceName ?? `#${session.workspaceId}`
         }
         month={reportMonth}
+        current={current}
+        now={now}
+        compact={compactHeader}
       />
-      <TimerPanel current={current} now={now} />
       {message && (
         <Box marginBottom={1}>
           <StatusMessage variant={message.variant}>

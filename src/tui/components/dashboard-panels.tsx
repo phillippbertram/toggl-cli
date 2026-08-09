@@ -1,7 +1,11 @@
 import {Spinner, StatusMessage} from '@inkjs/ui';
 import {Box, Text} from 'ink';
 
-import {timeEntryDescription, type TimeEntry} from '../../models.js';
+import {
+  timeEntryDescription,
+  timeEntryProjectLabel,
+  type TimeEntry,
+} from '../../models.js';
 import {
   formatDecimalHours,
   formatDuration,
@@ -14,57 +18,82 @@ export const Header = ({
   email,
   workspace,
   month,
+  current,
+  now,
+  compact,
 }: {
   email: string;
   workspace: string;
   month: string;
-}) => (
-  <Box justifyContent="space-between" marginBottom={1}>
-    <Text bold color="magenta">
-      tgl
-    </Text>
-    <Text>
-      {workspace} · {month}
-    </Text>
-    <Text dimColor>{email}</Text>
-  </Box>
-);
-
-export const TimerPanel = ({
-  current,
-  now,
-}: {
   current: Loadable<TimeEntry | null>;
   now: number;
-}) => (
-  <Box
-    borderStyle="round"
-    borderColor={current.data ? 'green' : 'gray'}
-    paddingX={1}
-    marginBottom={1}
-  >
-    {current.loading && current.data === undefined ? (
-      <Spinner label="Loading current timer" />
-    ) : current.error ? (
-      <StatusMessage variant="error">{current.error}</StatusMessage>
-    ) : current.data ? (
-      <Box justifyContent="space-between" width="100%">
-        <Text>
-          <Text color="green">● </Text>
-          <Text bold>{timeEntryDescription(current.data)}</Text>
-          {current.data.project_name ? ` · ${current.data.project_name}` : ''}
+  compact: boolean;
+}) => {
+  const borderColor = current.error ? 'red' : current.data ? 'green' : 'gray';
+  const pulseIsDimmed = Math.floor(now / 500) % 2 === 0;
+
+  return (
+    <Box
+      flexDirection="column"
+      borderStyle="round"
+      borderColor={borderColor}
+      paddingX={1}
+      marginBottom={1}
+    >
+      <Box width="100%">
+        <Text bold color="magenta">
+          tgl
         </Text>
-        <Text bold color="green">
-          {formatDuration(runningSeconds(current.data, now))}
-        </Text>
+        <Box flexGrow={1} minWidth={0} marginX={1}>
+          <Text wrap="truncate-end">
+            {workspace} · {month}
+          </Text>
+        </Box>
+        {!compact && (
+          <Box flexShrink={0}>
+            <Text dimColor>{email}</Text>
+          </Box>
+        )}
       </Box>
-    ) : (
-      <Text dimColor>
-        No timer is running. Press n to start or Enter to resume.
-      </Text>
-    )}
-  </Box>
-);
+      {current.loading && current.data === undefined ? (
+        <Spinner label="Loading current timer" />
+      ) : current.error ? (
+        <StatusMessage variant="error">{current.error}</StatusMessage>
+      ) : current.data ? (
+        <Box width="100%">
+          <Box flexGrow={1} minWidth={0} marginRight={1}>
+            <Text wrap="truncate-end">
+              <Text color="green" dimColor={pulseIsDimmed}>
+                ●{' '}
+              </Text>
+              <Text bold>{timeEntryDescription(current.data)}</Text>
+              <Text dimColor> · {timeEntryProjectLabel(current.data)}</Text>
+            </Text>
+          </Box>
+          <Box flexShrink={0}>
+            <Text bold color="green">
+              {formatLiveDuration(runningSeconds(current.data, now))}
+            </Text>
+          </Box>
+        </Box>
+      ) : (
+        <Text dimColor>
+          No timer is running. Press n to start or Enter to resume.
+        </Text>
+      )}
+    </Box>
+  );
+};
+
+const formatLiveDuration = (seconds: number): string => {
+  const wholeSeconds = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(wholeSeconds / 3600);
+  const minutes = Math.floor((wholeSeconds % 3600) / 60);
+  const remainingSeconds = wholeSeconds % 60;
+  return [hours, minutes, remainingSeconds]
+    .map((value) => String(value).padStart(2, '0'))
+    .join(':');
+};
 
 export const HistoryPanel = ({
   state,

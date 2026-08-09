@@ -4,7 +4,7 @@
   "project_id": 9001,
   "project_name": "Client Portal",
   "description": "LOOP-132: Build activity dashboard",
-  "start": "2026-08-09T11:12:00+02:00",
+  "start": "{{dateTimeShift minutes=-5}}",
   "stop": null,
   "duration": -1786266720,
   "created_with": "tgl",
