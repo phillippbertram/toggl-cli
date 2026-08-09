@@ -1,9 +1,16 @@
-import {existsSync, readFileSync, statSync} from 'node:fs';
+import {
+  existsSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import {homedir} from 'node:os';
-import {dirname, join, resolve} from 'node:path';
+import {basename, dirname, join, resolve} from 'node:path';
 
 import Conf from 'conf';
-import {parse, stringify} from 'yaml';
+import {parse, parseDocument, stringify} from 'yaml';
 import {z} from 'zod';
 
 import {TglError} from './errors.js';
@@ -42,7 +49,13 @@ const LocalConfigSchema = z
   .strict();
 
 export type AppConfig = z.infer<typeof AppConfigSchema>;
-type LocalConfig = z.infer<typeof LocalConfigSchema>;
+export type LocalConfig = z.infer<typeof LocalConfigSchema>;
+
+export type ConfigInspection = {
+  global: AppConfig;
+  local?: LocalConfig;
+  effective: AppConfig;
+};
 
 export type ConfigStoreOptions = {
   globalDirectory?: string;
@@ -68,30 +81,99 @@ export class ConfigStore {
     return this.#localPath ?? undefined;
   }
 
+  public get localCreationPath(): string {
+    return join(
+      resolve(this.options.searchDirectory ?? process.cwd()),
+      LOCAL_CONFIG_FILE_NAME,
+    );
+  }
+
   public load(): AppConfig {
+    return this.inspect().effective;
+  }
+
+  public inspect(): ConfigInspection {
     const globalConfig = this.loadGlobal();
     const localConfig = this.loadLocal();
-    if (!localConfig) {
-      return globalConfig;
+    return {
+      global: globalConfig,
+      ...(localConfig && {local: localConfig}),
+      effective: resolveConfig(globalConfig, localConfig),
+    };
+  }
+
+  public createLocal(values: LocalConfig): string {
+    const path = this.localCreationPath;
+    const config = LocalConfigSchema.parse(values);
+    try {
+      writeFileSync(path, stringify(config), {encoding: 'utf8', flag: 'wx'});
+    } catch (error) {
+      if (existsSync(path)) {
+        throw new TglError(
+          `Local configuration already exists at ${path}. Use a config command with --local to change it.`,
+          2,
+        );
+      }
+      throw configWriteError(path, error);
     }
 
-    const resolved = {...globalConfig};
-    if (localConfig.workspaceId !== undefined) {
-      resolved.workspaceId = localConfig.workspaceId;
-      delete resolved.workspaceName;
-      delete resolved.projectId;
-    }
-    if (localConfig.projectId !== undefined) {
-      resolved.projectId = localConfig.projectId;
-    }
-    if (localConfig.rounding !== undefined) {
-      resolved.rounding = mergeRoundingConfig(
-        globalConfig.rounding,
-        localConfig.rounding,
+    this.#localPath = path;
+    this.#localConfig = config;
+    return path;
+  }
+
+  public updateLocal(
+    values: Partial<LocalConfig>,
+    remove: Array<keyof LocalConfig> = [],
+  ): LocalConfig {
+    const path = this.localPath;
+    if (!path) {
+      throw new TglError(
+        'No local configuration was found. Run `tgl config init` in the project directory first.',
+        2,
       );
     }
 
-    return AppConfigSchema.parse(resolved);
+    const text = readConfigFile(path);
+    const leadingComments = leadingCommentBlock(text);
+    const document = parseLocalConfigDocument(text, path);
+    for (const key of remove) {
+      document.delete(key);
+    }
+    for (const [key, value] of Object.entries(values)) {
+      if (value !== undefined) {
+        document.set(key, value);
+      }
+    }
+
+    const next = parseLocalConfigDocumentValue(document.toJS(), path);
+    const rendered = document.toString();
+    writeConfigDocument(
+      path,
+      leadingComments && !rendered.startsWith(leadingComments)
+        ? `${leadingComments}${rendered}`
+        : rendered,
+    );
+    this.#localConfig = next;
+    return next;
+  }
+
+  public loadGlobal(): AppConfig {
+    return AppConfigSchema.parse(this.store.store);
+  }
+
+  public loadLocal(): LocalConfig | undefined {
+    const path = this.localPath;
+    if (!path) {
+      return undefined;
+    }
+
+    this.#localConfig ??= parseConfigFile(
+      readConfigFile(path),
+      path,
+      LocalConfigSchema,
+    );
+    return this.#localConfig;
   }
 
   public update(values: Partial<AppConfig>): AppConfig {
@@ -126,24 +208,6 @@ export class ConfigStore {
     }
   }
 
-  private loadGlobal(): AppConfig {
-    return AppConfigSchema.parse(this.store.store);
-  }
-
-  private loadLocal(): LocalConfig | undefined {
-    const path = this.localPath;
-    if (!path) {
-      return undefined;
-    }
-
-    this.#localConfig ??= parseConfigFile(
-      readConfigFile(path),
-      path,
-      LocalConfigSchema,
-    );
-    return this.#localConfig;
-  }
-
   private get store(): Conf<AppConfig> {
     const overriddenDirectory = process.env.TGL_CONFIG_DIR?.trim();
     this.#store ??= createStore(
@@ -154,6 +218,33 @@ export class ConfigStore {
     return this.#store;
   }
 }
+
+const resolveConfig = (
+  globalConfig: AppConfig,
+  localConfig?: LocalConfig,
+): AppConfig => {
+  if (!localConfig) {
+    return globalConfig;
+  }
+
+  const resolved = {...globalConfig};
+  if (localConfig.workspaceId !== undefined) {
+    resolved.workspaceId = localConfig.workspaceId;
+    delete resolved.workspaceName;
+    delete resolved.projectId;
+  }
+  if (localConfig.projectId !== undefined) {
+    resolved.projectId = localConfig.projectId;
+  }
+  if (localConfig.rounding !== undefined) {
+    resolved.rounding = mergeRoundingConfig(
+      globalConfig.rounding,
+      localConfig.rounding,
+    );
+  }
+
+  return AppConfigSchema.parse(resolved);
+};
 
 const createStore = (directory: string): Conf<AppConfig> => {
   const path = join(directory, CONFIG_FILE_NAME);
@@ -212,6 +303,69 @@ const parseConfigFile = <T>(
     throw configFileError(path, error);
   }
 };
+
+const parseLocalConfigDocument = (text: string, path: string) => {
+  try {
+    const document = parseDocument(text);
+    if (document.errors[0]) {
+      throw document.errors[0];
+    }
+    parseLocalConfigDocumentValue(document.toJS(), path);
+    return document;
+  } catch (error) {
+    throw configFileError(path, error);
+  }
+};
+
+const parseLocalConfigDocumentValue = (
+  value: unknown,
+  path: string,
+): LocalConfig => {
+  try {
+    return LocalConfigSchema.parse(value ?? {});
+  } catch (error) {
+    throw configFileError(path, error);
+  }
+};
+
+const leadingCommentBlock = (text: string): string => {
+  let block = '';
+  for (const line of text.match(/.*(?:\r?\n|$)/g) ?? []) {
+    if (line === '') {
+      continue;
+    }
+    if (!/^\s*(?:#.*)?(?:\r?\n)?$/.test(line)) {
+      break;
+    }
+    block += line;
+  }
+  return block.includes('#') ? block : '';
+};
+
+const writeConfigDocument = (path: string, text: string): void => {
+  const temporaryPath = join(
+    dirname(path),
+    `.${basename(path)}.${process.pid}.${Date.now()}.tmp`,
+  );
+  try {
+    writeFileSync(temporaryPath, text, {
+      encoding: 'utf8',
+      mode: statSync(path).mode,
+    });
+    renameSync(temporaryPath, path);
+  } catch (error) {
+    if (existsSync(temporaryPath)) {
+      unlinkSync(temporaryPath);
+    }
+    throw configWriteError(path, error);
+  }
+};
+
+const configWriteError = (path: string, error: unknown): TglError =>
+  new TglError(
+    `Could not write configuration file ${path}: ${error instanceof Error ? error.message : String(error)}`,
+    2,
+  );
 
 const configFileError = (path: string, error: unknown): TglError => {
   if (error instanceof TglError) {

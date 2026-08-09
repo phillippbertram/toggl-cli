@@ -74,9 +74,17 @@ tgl report --month 2026-07
 
 tgl auth status
 tgl auth logout
+tgl config
+tgl config --global
+tgl config --local
+tgl config --yaml
+tgl config init
 tgl config workspace
+tgl config workspace --local
 tgl config project
+tgl config project --local
 tgl config rounding
+tgl config rounding --local
 tgl config path
 ```
 
@@ -104,12 +112,26 @@ previous timer uses its configured stop rule.
 Non-secret settings are stored in `~/.tgl/config.yaml`. The API token is kept
 separately in macOS Keychain and is never written to this file.
 
-| Setting                | Command                | Behavior                                       |
-| ---------------------- | ---------------------- | ---------------------------------------------- |
-| Workspace              | `tgl config workspace` | Selects the global workspace                   |
-| Project for new timers | `tgl config project`   | Changes the globally remembered project        |
-| Time rounding          | `tgl config rounding`  | Configures global start and stop rules         |
-| Config paths           | `tgl config path`      | Prints the global and discovered local sources |
+| Setting                | Command                       | Behavior                                       |
+| ---------------------- | ----------------------------- | ---------------------------------------------- |
+| Current configuration  | `tgl config`                  | Shows effective values, sources, and overrides |
+| Global or local source | `tgl config --global/--local` | Shows one configuration scope                  |
+| Local setup            | `tgl config init`             | Creates `.tglrc` in the current directory      |
+| Workspace              | `tgl config workspace`        | Selects the global workspace                   |
+| Project for new timers | `tgl config project`          | Changes the globally remembered project        |
+| Time rounding          | `tgl config rounding`         | Configures global start and stop rules         |
+| Config paths           | `tgl config path`             | Prints the global and discovered local paths   |
+
+The workspace, project, and rounding commands update the global configuration
+by default. Pass `--local` to update the nearest discovered `.tglrc`, or
+`--global` to make the default explicit. Local choices can inherit the global
+value, disable it where applicable, or set their own value. Every write reports
+the file it changed and warns when a local override still controls the effective
+value.
+
+Pass `--yaml` to `tgl config`, optionally together with `--global` or `--local`,
+for machine-readable output. Showing the configuration is offline and does not
+contact Toggl.
 
 The project used by a successful `start` or `resume` becomes the remembered
 project for the next new timer. It can always be overridden with `--project` or
@@ -130,7 +152,7 @@ rounding:
 Omit a boundary to leave it exact, or set `rounding: false` to disable all
 global rounding. `tgl config rounding` guides you through both rules.
 
-Projects can also provide a read-only `.tglrc` file containing YAML:
+Projects can also provide a `.tglrc` file containing YAML:
 
 ```yaml
 workspaceId: 123456
@@ -154,9 +176,12 @@ rule, `start: false` or `stop: false` disables just that inherited rule, and
 `rounding: false` disables both rules for the project. Supported modes are
 `nearest`, `up`, and `down`; supported intervals are 1, 5, and 15 minutes.
 
-The local file is never created or modified by `tgl`. Login, logout, successful
-timer starts, and all `tgl config` commands continue to update only
-`~/.tgl/config.yaml`.
+Run `tgl config init` in a project directory to create `.tglrc` with an
+interactive workspace and project selection. Rounding initially inherits the
+global rules. If a parent `.tglrc` is already active, `tgl` confirms before
+creating the nearer file. Existing files are never overwritten by `init`;
+subsequent `--local` commands update the nearest discovered file while
+preserving unrelated settings and comments where possible.
 
 Rounding changes the stored Toggl timestamps rather than only changing report
 display. A rounded end that would precede its stored start is limited to the

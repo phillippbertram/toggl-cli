@@ -3,10 +3,16 @@ import {DateTime} from 'luxon';
 import pc from 'picocolors';
 import {z} from 'zod';
 
-import type {ConfigStore} from './config.js';
+import type {ConfigInspection, ConfigStore} from './config.js';
+import {
+  configAsYaml,
+  configDisplayRows,
+  formatConfigTable,
+  type ConfigViewScope,
+} from './config-display.js';
 import type {CredentialStore} from './credentials.js';
 import {TOKEN_ENVIRONMENT_VARIABLE} from './credentials.js';
-import {TglError} from './errors.js';
+import {TglError, UserCancelledError} from './errors.js';
 import {
   timeEntryDescription,
   timeEntryProjectId,
@@ -54,6 +60,15 @@ export type ReportOptions = {
   current?: boolean;
   previous?: boolean;
   month?: string;
+};
+
+export type ConfigScopeOptions = {
+  global?: boolean;
+  local?: boolean;
+};
+
+export type ConfigDisplayOptions = ConfigScopeOptions & {
+  yaml?: boolean;
 };
 
 export type CommandContext = {
@@ -104,58 +119,205 @@ export const logoutCommand = async (context: CommandContext): Promise<void> => {
   }
 };
 
-export const configureWorkspaceCommand = async (
+export const showConfigCommand = (
+  context: CommandContext,
+  options: ConfigDisplayOptions = {},
+): void => {
+  const scope = configViewScope(options);
+  const inspection = context.config.inspect();
+  if (options.yaml) {
+    console.log(configAsYaml(inspection, scope).trimEnd());
+    return;
+  }
+
+  const title = `${scope[0]!.toUpperCase()}${scope.slice(1)} configuration`;
+  console.log(pc.bold(title));
+  console.log(pc.dim(`Global: ${context.config.globalPath}`));
+  console.log(pc.dim(`Local: ${context.config.localPath ?? 'none'}`));
+  console.log(`\n${formatConfigTable(configDisplayRows(inspection, scope))}`);
+  if (scope === 'local' && !inspection.local) {
+    info('No local configuration found. Run `tgl config init` to create one.');
+  }
+};
+
+export const initializeLocalConfigCommand = async (
   context: CommandContext,
 ): Promise<void> => {
+  const targetPath = context.config.localCreationPath;
+  const activeLocalPath = context.config.localPath;
+  if (activeLocalPath === targetPath) {
+    throw new TglError(
+      `Local configuration already exists at ${targetPath}. Use a config command with --local to change it.`,
+      2,
+    );
+  }
+  if (activeLocalPath) {
+    const createOverride = await confirm({
+      message: `Create ${targetPath} and override the parent configuration at ${activeLocalPath}?`,
+      default: false,
+    });
+    if (!createOverride) {
+      throw new UserCancelledError();
+    }
+  }
+
+  const inspection = context.config.inspect();
   const session = await context.sessions.create();
   const workspaces = await session.client.getWorkspaces();
-  const workspace = await selectWorkspace(workspaces, session.workspaceId);
+  const workspace = await selectWorkspace(
+    workspaces,
+    inspection.effective.workspaceId ?? session.workspaceId,
+  );
+  const projects = await activeProjects(session.client, workspace.id);
+  const configuredProjectId =
+    inspection.effective.workspaceId === workspace.id
+      ? (inspection.effective.projectId ?? null)
+      : null;
+  const projectId = await chooseProject(
+    projects,
+    availableProjectDefault(projects, configuredProjectId),
+  );
+  const path = context.config.createLocal({
+    workspaceId: workspace.id,
+    projectId,
+  });
+  const project = projects.find((candidate) => candidate.id === projectId);
+  success(
+    `Created ${path} for ${workspace.name} · ${project?.name ?? 'No project'}.`,
+  );
+  info(
+    'Rounding inherits the global configuration. Use `tgl config rounding --local` to change it.',
+  );
+};
+
+export const configureWorkspaceCommand = async (
+  context: CommandContext,
+  options: ConfigScopeOptions = {},
+): Promise<void> => {
+  const local = configScope(options) === 'local';
+  const localPath = local ? requireLocalPath(context.config) : undefined;
+  const inspection = context.config.inspect();
+  const session = await context.sessions.create();
+  const workspaces = await session.client.getWorkspaces();
+  if (local) {
+    const workspaceId = await selectLocalWorkspace(workspaces, inspection);
+    if (workspaceId === undefined) {
+      context.config.updateLocal({}, ['workspaceId', 'projectId']);
+      success(`Local workspace override cleared in ${localPath}.`);
+      return;
+    }
+    context.config.updateLocal({workspaceId}, ['projectId']);
+    const workspace = workspaces.find(
+      (candidate) => candidate.id === workspaceId,
+    )!;
+    success(`Local workspace set to ${workspace.name} in ${localPath}.`);
+    return;
+  }
+
+  const workspace = await selectWorkspace(
+    workspaces,
+    inspection.global.workspaceId ??
+      session.user.default_workspace_id ??
+      undefined,
+  );
   context.config.update({
     workspaceId: workspace.id,
     workspaceName: workspace.name,
     projectId: null,
   });
-  success(`Workspace set to ${workspace.name}.`);
+  success(
+    `Global workspace set to ${workspace.name} in ${context.config.globalPath}.`,
+  );
+  warnIfWorkspaceOverridden(context.config);
 };
 
 export const configureProjectCommand = async (
   context: CommandContext,
+  options: ConfigScopeOptions = {},
 ): Promise<void> => {
+  const local = configScope(options) === 'local';
+  const localPath = local ? requireLocalPath(context.config) : undefined;
+  const inspection = context.config.inspect();
   const session = await context.sessions.create();
-  const projects = await activeProjects(session.client, session.workspaceId);
-  const projectId = await chooseProject(
-    projects,
-    context.config.load().projectId ?? null,
-  );
-  context.config.setProject(projectId);
+  const workspaceId = local
+    ? session.workspaceId
+    : (inspection.global.workspaceId ??
+      session.user.default_workspace_id ??
+      session.workspaceId);
+  const projects = await activeProjects(session.client, workspaceId);
+  const projectId = local
+    ? await chooseLocalProject(projects, inspection)
+    : await chooseProject(
+        projects,
+        availableProjectDefault(projects, inspection.global.projectId ?? null),
+      );
+  if (local && projectId === undefined) {
+    context.config.updateLocal({}, ['projectId']);
+    success(`Local project override cleared in ${localPath}.`);
+    return;
+  }
+  if (local) {
+    context.config.updateLocal({projectId});
+  } else {
+    context.config.setProject(projectId ?? null);
+  }
   const project = projects.find((candidate) => candidate.id === projectId);
   success(
     project
-      ? `Project for new timers set to ${project.name}.`
-      : 'Project for new timers cleared.',
+      ? `${local ? 'Local' : 'Global'} project for new timers set to ${project.name} in ${localPath ?? context.config.globalPath}.`
+      : `${local ? 'Local' : 'Global'} project for new timers set to no project in ${localPath ?? context.config.globalPath}.`,
   );
+  if (!local) {
+    warnIfProjectOverridden(context.config);
+  }
 };
 
 export const configureRoundingCommand = async (
   context: CommandContext,
+  options: ConfigScopeOptions = {},
 ): Promise<void> => {
-  const configured = effectiveRounding(context.config.loadGlobalRounding());
-  const start = await chooseRoundingRule('start', configured.start);
-  const stop = await chooseRoundingRule('stop', configured.stop);
+  const local = configScope(options) === 'local';
+  const localPath = local ? requireLocalPath(context.config) : undefined;
+  const inspection = context.config.inspect();
+  const configured = effectiveRounding(inspection.global.rounding);
+  const localRounding = inspection.local?.rounding;
+  const start = local
+    ? await chooseLocalRoundingRule(
+        'start',
+        configured.start,
+        localRounding === false ? false : localRounding?.start,
+      )
+    : await chooseRoundingRule('start', configured.start);
+  const stop = local
+    ? await chooseLocalRoundingRule(
+        'stop',
+        configured.stop,
+        localRounding === false ? false : localRounding?.stop,
+      )
+    : await chooseRoundingRule('stop', configured.stop);
+  if (local && start === undefined && stop === undefined) {
+    context.config.updateLocal({}, ['rounding']);
+    success(`Local rounding overrides cleared in ${localPath}.`);
+    return;
+  }
   const rounding: RoundingConfig =
-    start || stop
+    local || start || stop
       ? {
-          ...(start && {start}),
-          ...(stop && {stop}),
+          ...(start !== undefined && {start}),
+          ...(stop !== undefined && {stop}),
         }
       : false;
 
-  context.config.setRounding(rounding);
-  success(`Global rounding set to ${roundingConfigSummary(rounding)}.`);
-  if (context.config.localPath) {
-    warning(
-      `Local rounding overrides from ${context.config.localPath} may still apply.`,
-    );
+  if (local) {
+    context.config.updateLocal({rounding});
+  } else {
+    context.config.setRounding(rounding);
+  }
+  success(
+    `${local ? 'Local' : 'Global'} rounding set to ${roundingConfigSummary(rounding, local)} in ${localPath ?? context.config.globalPath}.`,
+  );
+  if (!local) {
+    warnIfRoundingOverridden(context.config);
   }
 };
 
@@ -320,6 +482,76 @@ const resolveReportMonth = (
   return monthKey(session.user.timezone, options.previous ? -1 : 0);
 };
 
+const configScope = (options: ConfigScopeOptions): 'global' | 'local' => {
+  if (options.global && options.local) {
+    throw new TglError('Use only one of --global or --local.', 2);
+  }
+  return options.local ? 'local' : 'global';
+};
+
+const configViewScope = (options: ConfigScopeOptions): ConfigViewScope => {
+  const scope = configScope(options);
+  return options.global || options.local ? scope : 'effective';
+};
+
+const requireLocalPath = (config: ConfigStore): string => {
+  const path = config.localPath;
+  if (!path) {
+    throw new TglError(
+      'No local configuration was found. Run `tgl config init` in the project directory first.',
+      2,
+    );
+  }
+  return path;
+};
+
+const warnIfWorkspaceOverridden = (config: ConfigStore): void => {
+  const inspection = config.inspect();
+  if (inspection.local?.workspaceId !== undefined) {
+    warning(
+      `The effective workspace remains #${inspection.effective.workspaceId} because ${config.localPath} overrides the global value.`,
+    );
+  }
+};
+
+const warnIfProjectOverridden = (config: ConfigStore): void => {
+  const inspection = config.inspect();
+  if (
+    inspection.local?.projectId !== undefined ||
+    inspection.local?.workspaceId !== undefined
+  ) {
+    warning(
+      `The effective project remains ${projectConfigLabel(inspection.effective.projectId)} because ${config.localPath} overrides the global value.`,
+    );
+  }
+};
+
+const warnIfRoundingOverridden = (config: ConfigStore): void => {
+  if (config.loadLocal()?.rounding !== undefined) {
+    warning(
+      `Local rounding overrides from ${config.localPath} still apply to the effective configuration.`,
+    );
+  }
+};
+
+const availableProjectDefault = (
+  projects: Project[],
+  projectId: number | null,
+): number | null =>
+  projectId !== null && projects.some((project) => project.id === projectId)
+    ? projectId
+    : null;
+
+const projectConfigLabel = (projectId: number | null | undefined): string =>
+  projectId === undefined
+    ? 'not configured'
+    : projectId === null
+      ? 'no project'
+      : `#${projectId}`;
+
+const roundingRuleLabel = (rule: RoundingRule | undefined): string =>
+  rule ? `${rule.minutes}m ${rule.mode}` : 'off';
+
 const chooseWorkspace = async (login: ValidatedLogin): Promise<Workspace> => {
   const preferred = preferredWorkspace(login.user, login.workspaces);
   if (preferred) {
@@ -350,6 +582,30 @@ const selectWorkspace = async (
   return workspace;
 };
 
+const selectLocalWorkspace = async (
+  workspaces: Workspace[],
+  inspection: ConfigInspection,
+): Promise<number | undefined> => {
+  const inherit = 'inherit';
+  const globalLabel = inspection.global.workspaceId
+    ? inspection.global.workspaceName
+      ? `${inspection.global.workspaceName} (#${inspection.global.workspaceId})`
+      : `#${inspection.global.workspaceId}`
+    : 'not configured';
+  const selected = await select<number | typeof inherit>({
+    message: 'Local workspace',
+    choices: [
+      {name: `Inherit global (${globalLabel})`, value: inherit},
+      ...workspaces.map((workspace) => ({
+        name: workspace.name,
+        value: workspace.id,
+      })),
+    ],
+    default: inspection.local?.workspaceId ?? inherit,
+  });
+  return selected === inherit ? undefined : selected;
+};
+
 const chooseProject = async (
   projects: Project[],
   defaultProjectId: number | null,
@@ -364,6 +620,28 @@ const chooseProject = async (
     pageSize: 12,
   });
 
+const chooseLocalProject = async (
+  projects: Project[],
+  inspection: ConfigInspection,
+): Promise<number | null | undefined> => {
+  const inherit = 'inherit';
+  const globalProject = projectConfigLabel(inspection.global.projectId);
+  const inheritLabel = inspection.local?.workspaceId
+    ? `No local project (global ${globalProject} is not inherited for a local workspace)`
+    : `Inherit global (${globalProject})`;
+  const selected = await select<number | null | typeof inherit>({
+    message: 'Local project',
+    choices: [
+      {name: inheritLabel, value: inherit},
+      {name: 'No project (local override)', value: null},
+      ...projects.map((project) => ({name: project.name, value: project.id})),
+    ],
+    default: inspection.local?.projectId ?? inherit,
+    pageSize: 12,
+  });
+  return selected === inherit ? undefined : selected;
+};
+
 const chooseRoundingRule = async (
   boundary: 'start' | 'stop',
   configured?: RoundingRule,
@@ -375,7 +653,47 @@ const chooseRoundingRule = async (
   if (!enabled) {
     return undefined;
   }
+  return chooseRoundingRuleValues(boundary, configured);
+};
 
+const chooseLocalRoundingRule = async (
+  boundary: 'start' | 'stop',
+  globalRule: RoundingRule | undefined,
+  localRule: RoundingRule | false | undefined,
+): Promise<RoundingRule | false | undefined> => {
+  const action = await select<'inherit' | 'off' | 'custom'>({
+    message: `${boundary === 'start' ? 'Start' : 'Stop'} rounding`,
+    choices: [
+      {
+        name: `Inherit global (${roundingRuleLabel(globalRule)})`,
+        value: 'inherit',
+      },
+      {name: 'No rounding', value: 'off'},
+      {name: 'Custom rule', value: 'custom'},
+    ],
+    default:
+      localRule === undefined
+        ? 'inherit'
+        : localRule === false
+          ? 'off'
+          : 'custom',
+  });
+  if (action === 'inherit') {
+    return undefined;
+  }
+  if (action === 'off') {
+    return false;
+  }
+  return chooseRoundingRuleValues(
+    boundary,
+    localRule && typeof localRule === 'object' ? localRule : globalRule,
+  );
+};
+
+const chooseRoundingRuleValues = async (
+  boundary: 'start' | 'stop',
+  configured?: RoundingRule,
+): Promise<RoundingRule> => {
   const minutes = await select<RoundingMinutes>({
     message: `${boundary === 'start' ? 'Start' : 'Stop'} interval`,
     choices: [1, 5, 15].map((value) => ({
@@ -523,15 +841,20 @@ const roundingSuffix = (
   return ` · ${boundary} rounded from ${original} to ${rounded}`;
 };
 
-const roundingConfigSummary = (rounding: RoundingConfig): string => {
+const roundingConfigSummary = (
+  rounding: RoundingConfig,
+  inheritOmitted = false,
+): string => {
   if (rounding === false) {
     return 'disabled';
   }
 
   return (['start', 'stop'] as const)
-    .flatMap((boundary) => {
+    .map((boundary) => {
       const rule = rounding[boundary];
-      return rule ? [`${boundary} ${rule.minutes}m ${rule.mode}`] : [];
+      return rule
+        ? `${boundary} ${rule.minutes}m ${rule.mode}`
+        : `${boundary} ${rule === false ? 'disabled' : inheritOmitted ? 'inherited' : 'off'}`;
     })
     .join(', ');
 };

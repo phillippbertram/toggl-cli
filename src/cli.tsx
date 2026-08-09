@@ -9,14 +9,18 @@ import {
   configureProjectCommand,
   configureRoundingCommand,
   configureWorkspaceCommand,
+  initializeLocalConfigCommand,
   loginCommand,
   logoutCommand,
   reportCommand,
   resumeCommand,
+  showConfigCommand,
   startCommand,
   statusCommand,
   stopCommand,
   type CommandContext,
+  type ConfigDisplayOptions,
+  type ConfigScopeOptions,
   type StartOptions,
   type StopOptions,
 } from './commands.js';
@@ -68,6 +72,17 @@ const addRoundingOptions = (command: Command): Command =>
     .addOption(
       new Option('--no-round', 'skip configured rounding').conflicts(
         'roundMode',
+      ),
+    );
+
+const addConfigScopeOptions = (command: Command): Command =>
+  command
+    .addOption(
+      new Option('--global', 'use the global configuration').conflicts('local'),
+    )
+    .addOption(
+      new Option('--local', 'use the discovered local configuration').conflicts(
+        'global',
       ),
     );
 
@@ -192,19 +207,45 @@ auth
   .description('Remove stored authentication')
   .action(async () => logoutCommand(context));
 
-const configure = program.command('config').description('Manage tgl settings');
-configure
+const configure = addConfigScopeOptions(
+  program
+    .command('config')
+    .description('Show and manage tgl settings')
+    .option('--yaml', 'print configuration as YAML'),
+).action((options: ConfigDisplayOptions) =>
+  showConfigCommand(context, options),
+);
+const configureWorkspace = configure
   .command('workspace')
   .description('Choose the active workspace')
-  .action(async () => configureWorkspaceCommand(context));
-configure
+  .action(async () =>
+    configureWorkspaceCommand(
+      context,
+      configureWorkspace.optsWithGlobals<ConfigScopeOptions>(),
+    ),
+  );
+const configureProject = configure
   .command('project')
   .description('Choose the project for new timers')
-  .action(async () => configureProjectCommand(context));
-configure
+  .action(async () =>
+    configureProjectCommand(
+      context,
+      configureProject.optsWithGlobals<ConfigScopeOptions>(),
+    ),
+  );
+const configureRounding = configure
   .command('rounding')
-  .description('Configure global start and stop rounding')
-  .action(async () => configureRoundingCommand(context));
+  .description('Configure start and stop rounding')
+  .action(async () =>
+    configureRoundingCommand(
+      context,
+      configureRounding.optsWithGlobals<ConfigScopeOptions>(),
+    ),
+  );
+configure
+  .command('init')
+  .description('Create a local configuration in the current directory')
+  .action(async () => initializeLocalConfigCommand(context));
 configure
   .command('path')
   .description('Print the global and local config paths')

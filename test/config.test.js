@@ -6,6 +6,11 @@ import {parse} from 'yaml';
 import {afterEach, expect, test} from 'vitest';
 
 import {ConfigStore} from '../src/config.ts';
+import {
+  configAsYaml,
+  configDisplayRows,
+  formatConfigTable,
+} from '../src/config-display.ts';
 import {effectiveRounding} from '../src/rounding.ts';
 
 const temporaryDirectories = [];
@@ -62,6 +67,100 @@ test('stores and reloads the global configuration as YAML', async () => {
       searchDirectory: projectDirectory,
     }).load(),
   ).toEqual(persisted);
+});
+
+test('inspects global, local, and effective configuration separately', async () => {
+  const {globalDirectory, projectDirectory} = await createFixture();
+  await writeFile(
+    join(projectDirectory, '.tglrc'),
+    'workspaceId: 200\nrounding:\n  start: false\n',
+  );
+  const store = new ConfigStore({
+    globalDirectory,
+    searchDirectory: projectDirectory,
+  });
+  store.update({
+    projectId: 101,
+    rounding: {
+      start: {minutes: 15, mode: 'nearest'},
+      stop: {minutes: 5, mode: 'up'},
+    },
+    workspaceId: 100,
+    workspaceName: 'Global',
+  });
+
+  expect(store.inspect()).toEqual({
+    global: {
+      projectId: 101,
+      rounding: {
+        start: {minutes: 15, mode: 'nearest'},
+        stop: {minutes: 5, mode: 'up'},
+      },
+      workspaceId: 100,
+      workspaceName: 'Global',
+    },
+    local: {rounding: {start: false}, workspaceId: 200},
+    effective: {
+      rounding: {
+        start: false,
+        stop: {minutes: 5, mode: 'up'},
+      },
+      workspaceId: 200,
+    },
+  });
+});
+
+test('creates a local configuration without overwriting an existing file', async () => {
+  const {globalDirectory, projectDirectory} = await createFixture();
+  const store = new ConfigStore({
+    globalDirectory,
+    searchDirectory: projectDirectory,
+  });
+
+  const path = store.createLocal({workspaceId: 123, projectId: null});
+
+  expect(path).toBe(join(projectDirectory, '.tglrc'));
+  expect(parse(await readFile(path, 'utf8'))).toEqual({
+    workspaceId: 123,
+    projectId: null,
+  });
+  expect(() => store.createLocal({workspaceId: 456})).toThrow('already exists');
+  expect(parse(await readFile(path, 'utf8'))).toEqual({
+    workspaceId: 123,
+    projectId: null,
+  });
+});
+
+test('updates the discovered local file and preserves comments', async () => {
+  const {globalDirectory, projectDirectory} = await createFixture();
+  const nestedDirectory = join(projectDirectory, 'src');
+  const localPath = join(projectDirectory, '.tglrc');
+  await mkdir(nestedDirectory, {recursive: true});
+  await writeFile(
+    localPath,
+    '# Project-specific settings\nworkspaceId: 100\nprojectId: 200\n',
+  );
+  const store = new ConfigStore({
+    globalDirectory,
+    searchDirectory: nestedDirectory,
+  });
+
+  store.updateLocal({projectId: null}, ['workspaceId']);
+
+  const updated = await readFile(localPath, 'utf8');
+  expect(updated).toContain('# Project-specific settings');
+  expect(parse(updated)).toEqual({projectId: null});
+  expect(store.loadLocal()).toEqual({projectId: null});
+});
+
+test('local updates require an initialized local configuration', async () => {
+  const {globalDirectory, projectDirectory} = await createFixture();
+  const store = new ConfigStore({
+    globalDirectory,
+    searchDirectory: projectDirectory,
+  });
+
+  expect(() => store.updateLocal({projectId: null})).toThrow('tgl config init');
 });
 
 test('ignores a previous JSON configuration', async () => {
@@ -253,6 +352,85 @@ test('supports disabling all inherited rounding locally', async () => {
   });
 
   expect(effectiveRounding(store.load().rounding)).toEqual({});
+});
+
+test('describes effective overrides and workspace project resets', async () => {
+  const {globalDirectory, projectDirectory} = await createFixture();
+  await writeFile(
+    join(projectDirectory, '.tglrc'),
+    [
+      'workspaceId: 200',
+      'rounding:',
+      '  start: false',
+      '  stop:',
+      '    minutes: 1',
+      '    mode: down',
+      '',
+    ].join('\n'),
+  );
+  const store = new ConfigStore({
+    globalDirectory,
+    searchDirectory: projectDirectory,
+  });
+  store.update({
+    projectId: 101,
+    rounding: {
+      start: {minutes: 15, mode: 'nearest'},
+      stop: {minutes: 5, mode: 'up'},
+    },
+    workspaceId: 100,
+    workspaceName: 'Global',
+  });
+
+  const rows = configDisplayRows(store.inspect(), 'effective');
+
+  expect(rows).toEqual([
+    {
+      setting: 'Workspace',
+      value: '#200',
+      source: 'local',
+      detail: 'global Global (#100) overridden',
+    },
+    {
+      setting: 'Project',
+      value: 'no project',
+      source: 'local workspace',
+      detail: 'global #101 ignored',
+    },
+    {
+      setting: 'Start rounding',
+      value: 'off',
+      source: 'local',
+      detail: 'global 15 min, nearest overridden',
+    },
+    {
+      setting: 'Stop rounding',
+      value: '1 min, down',
+      source: 'local',
+      detail: 'global 5 min, up overridden',
+    },
+  ]);
+  expect(formatConfigTable(rows)).toContain('Project         no project');
+});
+
+test('prints scoped YAML including an empty missing local configuration', async () => {
+  const {globalDirectory, projectDirectory} = await createFixture();
+  const store = new ConfigStore({
+    globalDirectory,
+    searchDirectory: projectDirectory,
+  });
+  store.update({projectId: null, workspaceId: 100});
+  const inspection = store.inspect();
+
+  expect(parse(configAsYaml(inspection, 'effective'))).toEqual({
+    projectId: null,
+    workspaceId: 100,
+  });
+  expect(parse(configAsYaml(inspection, 'global'))).toEqual({
+    projectId: null,
+    workspaceId: 100,
+  });
+  expect(parse(configAsYaml(inspection, 'local'))).toEqual({});
 });
 
 test('rejects unsupported rounding intervals and modes', async () => {
