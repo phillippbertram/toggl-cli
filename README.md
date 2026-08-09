@@ -205,6 +205,8 @@ The default `tgl` dashboard focuses on one day at a time. It shows completed
 entries with start time and duration, the running timer, a live day total, and a
 compact summary of the effective workspace, project, rounding, and timezone.
 
+![tgl fullscreen dashboard](docs/images/tui-dashboard.png)
+
 Use the arrow keys to change the selected entry or day. Press `a` to add a
 completed entry, `d` to delete the selected entry after confirmation, and
 `Enter` to resume it. The month report is available in a separate view through
