@@ -102,3 +102,15 @@ pnpm run build
 
 `pnpm run check` runs all validation steps. The MVP intentionally has no
 automated unit-test suite.
+
+## Support
+
+If you find this project useful, consider buying me a coffee:
+
+<a href="https://buymeacoffee.com/phillippbertram">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="45">
+</a>
+
+## License
+
+Licensed under the [MIT License](LICENSE).

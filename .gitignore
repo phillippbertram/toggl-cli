@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output and TypeScript cache
+dist/
+*.tsbuildinfo
+
+# Local environment files (may contain TOGGL_API_TOKEN)
+.env
+.env.*
+!.env.example
+
+# Logs and operating system files
+*.log
+.DS_Store

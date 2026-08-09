@@ -1,0 +1,52 @@
+{
+  "name": "tgl",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A friendly Toggl Track CLI and terminal UI",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "tgl": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.15.1",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run build",
+    "dev": "pnpm run build && node dist/cli.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "global:install": "pnpm add --global .",
+    "global:remove": "pnpm remove --global tgl",
+    "lint": "eslint .",
+    "start": "node dist/cli.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@inkjs/ui": "^2.0.0",
+    "@inquirer/prompts": "^8.5.2",
+    "@napi-rs/keyring": "^1.3.0",
+    "commander": "^15.0.0",
+    "conf": "^15.1.0",
+    "ink": "^7.1.1",
+    "luxon": "^3.7.2",
+    "picocolors": "^1.1.1",
+    "react": "^19.2.8",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/luxon": "^3.7.4",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "eslint": "^10.8.1",
+    "prettier": "^3.9.6",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.66.0"
+  }
+}
