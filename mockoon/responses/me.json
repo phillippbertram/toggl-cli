@@ -1,0 +1,10 @@
+{
+  "id": 707070,
+  "email": "phillipp.bertram@example.com",
+  "fullname": "Phillipp Bertram",
+  "timezone": "Europe/Berlin",
+  "default_workspace_id": 424242,
+  "beginning_of_week": 1,
+  "country_id": "DE",
+  "image_url": "https://assets.example.com/avatar/phillipp.png"
+}

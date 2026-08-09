@@ -1,5 +1,12 @@
+import {existsSync} from 'node:fs';
+import {homedir} from 'node:os';
+import {join} from 'node:path';
+
 import Conf from 'conf';
 import {z} from 'zod';
+
+const PROJECT_NAME = 'tgl-cli';
+const DEFAULT_CONFIG_DIRECTORY = join(homedir(), '.tgl');
 
 const AppConfigSchema = z.object({
   userId: z.number().optional(),
@@ -50,10 +57,29 @@ export class ConfigStore {
 
   private get store(): Conf<AppConfig> {
     const overriddenDirectory = process.env.TGL_CONFIG_DIR?.trim();
-    this.#store ??= new Conf<AppConfig>({
-      projectName: 'tgl-cli',
-      ...(overriddenDirectory ? {cwd: overriddenDirectory} : {}),
-    });
+    this.#store ??= createStore(overriddenDirectory);
     return this.#store;
   }
 }
+
+const createStore = (overriddenDirectory?: string): Conf<AppConfig> => {
+  const store = new Conf<AppConfig>({
+    projectName: PROJECT_NAME,
+    cwd: overriddenDirectory || DEFAULT_CONFIG_DIRECTORY,
+  });
+
+  if (!overriddenDirectory && !existsSync(store.path)) {
+    migrateLegacyConfig(store);
+  }
+
+  return store;
+};
+
+const migrateLegacyConfig = (store: Conf<AppConfig>): void => {
+  const legacyStore = new Conf<AppConfig>({projectName: PROJECT_NAME});
+  if (!existsSync(legacyStore.path)) {
+    return;
+  }
+
+  store.store = AppConfigSchema.parse(legacyStore.store);
+};

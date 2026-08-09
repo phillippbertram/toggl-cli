@@ -1,0 +1,122 @@
+[
+  {
+    "id": 81015,
+    "workspace_id": 424242,
+    "project_id": 9004,
+    "project_name": "Team & Operations",
+    "description": "OPS-42: Sprint planning and prioritization",
+    "start": "2026-08-07T15:00:00+02:00",
+    "stop": "2026-08-07T16:30:00+02:00",
+    "duration": 5400
+  },
+  {
+    "id": 81014,
+    "workspace_id": 424242,
+    "project_id": 9001,
+    "project_name": "Client Portal",
+    "description": "LOOP-119: Review accessibility feedback",
+    "start": "2026-08-07T11:40:00+02:00",
+    "stop": "2026-08-07T14:25:00+02:00",
+    "duration": 9900
+  },
+  {
+    "id": 81013,
+    "workspace_id": 424242,
+    "project_id": 9002,
+    "project_name": "Web Platform",
+    "description": "WEB-73: Polish landing page animations",
+    "start": "2026-08-07T09:00:00+02:00",
+    "stop": "2026-08-07T11:20:00+02:00",
+    "duration": 8400
+  },
+  {
+    "id": 81012,
+    "workspace_id": 424242,
+    "project_id": 9004,
+    "project_name": "Team & Operations",
+    "description": "Team sync and roadmap review",
+    "start": "2026-08-06T15:30:00+02:00",
+    "stop": "2026-08-06T17:00:00+02:00",
+    "duration": 5400
+  },
+  {
+    "id": 81011,
+    "workspace_id": 424242,
+    "project_id": 9001,
+    "project_name": "Client Portal",
+    "description": "LOOP-128: Refine onboarding flow",
+    "start": "2026-08-06T12:45:00+02:00",
+    "stop": "2026-08-06T15:15:00+02:00",
+    "duration": 9000
+  },
+  {
+    "id": 81010,
+    "workspace_id": 424242,
+    "project_id": 9001,
+    "project_name": "Client Portal",
+    "description": "LOOP-121: Implement project overview",
+    "start": "2026-08-06T08:30:00+02:00",
+    "stop": "2026-08-06T11:45:00+02:00",
+    "duration": 11700
+  },
+  {
+    "id": 81009,
+    "workspace_id": 424242,
+    "project_id": 9003,
+    "project_name": "Internal Tooling",
+    "description": "LOOP-108: Prepare release notes",
+    "start": "2026-08-05T16:00:00+02:00",
+    "stop": "2026-08-05T17:00:00+02:00",
+    "duration": 3600
+  },
+  {
+    "id": 81008,
+    "workspace_id": 424242,
+    "project_id": 9001,
+    "project_name": "Client Portal",
+    "description": "LOOP-114: Improve empty states",
+    "start": "2026-08-05T13:00:00+02:00",
+    "stop": "2026-08-05T15:40:00+02:00",
+    "duration": 9600
+  },
+  {
+    "id": 81007,
+    "workspace_id": 424242,
+    "project_id": 9001,
+    "project_name": "Client Portal",
+    "description": "LOOP-119: Review accessibility feedback",
+    "start": "2026-08-05T09:10:00+02:00",
+    "stop": "2026-08-05T12:00:00+02:00",
+    "duration": 10200
+  },
+  {
+    "id": 81006,
+    "workspace_id": 424242,
+    "project_id": 9004,
+    "project_name": "Team & Operations",
+    "description": "OPS-42: Sprint planning and prioritization",
+    "start": "2026-08-04T14:20:00+02:00",
+    "stop": "2026-08-04T16:35:00+02:00",
+    "duration": 8100
+  },
+  {
+    "id": 81005,
+    "workspace_id": 424242,
+    "project_id": 9001,
+    "project_name": "Client Portal",
+    "description": "LOOP-121: Implement project overview",
+    "start": "2026-08-04T11:00:00+02:00",
+    "stop": "2026-08-04T13:30:00+02:00",
+    "duration": 9000
+  },
+  {
+    "id": 81004,
+    "workspace_id": 424242,
+    "project_id": 9001,
+    "project_name": "Client Portal",
+    "description": "LOOP-128: Refine onboarding flow",
+    "start": "2026-08-04T08:45:00+02:00",
+    "stop": "2026-08-04T10:45:00+02:00",
+    "duration": 7200
+  }
+]

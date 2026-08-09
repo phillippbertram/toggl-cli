@@ -1,0 +1,12 @@
+[
+  {
+    "id": 424242,
+    "name": "Infinite Loop Labs",
+    "organization_id": 515151,
+    "premium": true,
+    "business_ws": false,
+    "admin": true,
+    "default_hourly_rate": 120,
+    "default_currency": "EUR"
+  }
+]

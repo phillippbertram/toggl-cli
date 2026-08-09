@@ -1,6 +1,6 @@
 import {z} from 'zod';
 
-import {TogglApiError, errorMessage} from './errors.js';
+import {TglError, TogglApiError, errorMessage} from './errors.js';
 import type {Logger} from './logger.js';
 import {
   CurrentTimeEntrySchema,
@@ -17,8 +17,7 @@ import {
   type Workspace,
 } from './models.js';
 
-const API_BASE_URL = 'https://api.track.toggl.com/api/v9';
-const REPORTS_BASE_URL = 'https://api.track.toggl.com/reports/api/v3';
+const DEFAULT_API_ORIGIN = 'https://api.track.toggl.com';
 const REQUEST_TIMEOUT_MS = 10_000;
 
 type RequestResult<T> = {
@@ -30,12 +29,17 @@ const EmptyResponseSchema = z.unknown().transform(() => undefined);
 
 export class TogglApiClient {
   readonly #authorization: string;
+  readonly #apiBaseUrl: string;
+  readonly #reportsBaseUrl: string;
 
   public constructor(
     token: string,
     private readonly logger: Logger,
   ) {
+    const apiOrigin = resolveApiOrigin();
     this.#authorization = `Basic ${Buffer.from(`${token}:api_token`).toString('base64')}`;
+    this.#apiBaseUrl = `${apiOrigin}/api/v9`;
+    this.#reportsBaseUrl = `${apiOrigin}/reports/api/v3`;
   }
 
   async #request<T>(
@@ -129,7 +133,7 @@ export class TogglApiClient {
 
   public async getMe(): Promise<TogglUser> {
     return (
-      await this.#request('GET', new URL(`${API_BASE_URL}/me`), UserSchema)
+      await this.#request('GET', new URL(`${this.#apiBaseUrl}/me`), UserSchema)
     ).data;
   }
 
@@ -137,14 +141,14 @@ export class TogglApiClient {
     return (
       await this.#request(
         'GET',
-        new URL(`${API_BASE_URL}/me/workspaces`),
+        new URL(`${this.#apiBaseUrl}/me/workspaces`),
         WorkspaceListSchema,
       )
     ).data;
   }
 
   public async getProjects(): Promise<Project[]> {
-    const url = new URL(`${API_BASE_URL}/me/projects`);
+    const url = new URL(`${this.#apiBaseUrl}/me/projects`);
     url.searchParams.set('include_archived', 'true');
     return (await this.#request('GET', url, ProjectListSchema)).data;
   }
@@ -153,7 +157,7 @@ export class TogglApiClient {
     return (
       await this.#request(
         'GET',
-        new URL(`${API_BASE_URL}/me/time_entries/current`),
+        new URL(`${this.#apiBaseUrl}/me/time_entries/current`),
         CurrentTimeEntrySchema,
       )
     ).data;
@@ -163,7 +167,7 @@ export class TogglApiClient {
     startDate: string,
     endDate: string,
   ): Promise<TimeEntry[]> {
-    const url = new URL(`${API_BASE_URL}/me/time_entries`);
+    const url = new URL(`${this.#apiBaseUrl}/me/time_entries`);
     url.searchParams.set('start_date', startDate);
     url.searchParams.set('end_date', endDate);
     return (await this.#request('GET', url, TimeEntryListSchema)).data;
@@ -188,7 +192,9 @@ export class TogglApiClient {
     return (
       await this.#request(
         'POST',
-        new URL(`${API_BASE_URL}/workspaces/${input.workspaceId}/time_entries`),
+        new URL(
+          `${this.#apiBaseUrl}/workspaces/${input.workspaceId}/time_entries`,
+        ),
         TimeEntrySchema,
         body,
       )
@@ -204,7 +210,7 @@ export class TogglApiClient {
     await this.#request(
       'PATCH',
       new URL(
-        `${API_BASE_URL}/workspaces/${workspaceId}/time_entries/${entry.id}/stop`,
+        `${this.#apiBaseUrl}/workspaces/${workspaceId}/time_entries/${entry.id}/stop`,
       ),
       EmptyResponseSchema,
     );
@@ -241,7 +247,7 @@ export class TogglApiClient {
       const result = await this.#request(
         'POST',
         new URL(
-          `${REPORTS_BASE_URL}/workspace/${input.workspaceId}/search/time_entries`,
+          `${this.#reportsBaseUrl}/workspace/${input.workspaceId}/search/time_entries`,
         ),
         ReportRowListSchema,
         body,
@@ -293,3 +299,31 @@ const parseHeaderNumber = (
 
 const elapsedMilliseconds = (startedAt: number): number =>
   Math.round(performance.now() - startedAt);
+
+const resolveApiOrigin = (): string => {
+  const configured = process.env.TGL_API_ORIGIN?.trim();
+  if (!configured) {
+    return DEFAULT_API_ORIGIN;
+  }
+
+  try {
+    const url = new URL(configured);
+    if (
+      !['http:', 'https:'].includes(url.protocol) ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    ) {
+      throw new Error('Unsupported API origin');
+    }
+
+    const pathname = url.pathname.replace(/\/+$/, '');
+    return `${url.origin}${pathname === '/' ? '' : pathname}`;
+  } catch {
+    throw new TglError(
+      'TGL_API_ORIGIN must be an HTTP(S) URL without credentials, query parameters, or a fragment.',
+      2,
+    );
+  }
+};

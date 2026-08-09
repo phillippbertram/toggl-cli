@@ -1,0 +1,42 @@
+[
+  {
+    "id": 9001,
+    "workspace_id": 424242,
+    "name": "Client Portal",
+    "color": "#8B5CF6",
+    "active": true,
+    "can_track_time": true
+  },
+  {
+    "id": 9002,
+    "workspace_id": 424242,
+    "name": "Web Platform",
+    "color": "#06B6D4",
+    "active": true,
+    "can_track_time": true
+  },
+  {
+    "id": 9003,
+    "workspace_id": 424242,
+    "name": "Internal Tooling",
+    "color": "#10B981",
+    "active": true,
+    "can_track_time": true
+  },
+  {
+    "id": 9004,
+    "workspace_id": 424242,
+    "name": "Team & Operations",
+    "color": "#F59E0B",
+    "active": true,
+    "can_track_time": true
+  },
+  {
+    "id": 9099,
+    "workspace_id": 424242,
+    "name": "Legacy Mobile App",
+    "color": "#64748B",
+    "active": false,
+    "can_track_time": false
+  }
+]

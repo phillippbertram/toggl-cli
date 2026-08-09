@@ -1,0 +1,396 @@
+{
+  "uuid": "52d22844-37d1-4e5e-9a17-1b51829b5620",
+  "lastMigration": 33,
+  "name": "tgl development API",
+  "endpointPrefix": "",
+  "latency": 80,
+  "port": 3006,
+  "hostname": "",
+  "folders": [],
+  "routes": [
+    {
+      "uuid": "11111111-1111-4111-8111-000000000001",
+      "type": "http",
+      "documentation": "Return the fictional development user.",
+      "method": "get",
+      "endpoint": "api/v9/me",
+      "responses": [
+        {
+          "uuid": "21111111-1111-4111-8111-000000000001",
+          "body": "{}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Phillipp Bertram",
+          "headers": [],
+          "bodyType": "FILE",
+          "filePath": "responses/me.json",
+          "databucketID": "",
+          "sendFileAsBody": true,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": true,
+          "fallbackTo404": true,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null,
+      "streamingMode": null,
+      "streamingInterval": 0
+    },
+    {
+      "uuid": "11111111-1111-4111-8111-000000000002",
+      "type": "http",
+      "documentation": "Return the Infinite Loop Labs workspace.",
+      "method": "get",
+      "endpoint": "api/v9/me/workspaces",
+      "responses": [
+        {
+          "uuid": "21111111-1111-4111-8111-000000000002",
+          "body": "[]",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Infinite Loop Labs",
+          "headers": [],
+          "bodyType": "FILE",
+          "filePath": "responses/workspaces.json",
+          "databucketID": "",
+          "sendFileAsBody": true,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": true,
+          "fallbackTo404": true,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null,
+      "streamingMode": null,
+      "streamingInterval": 0
+    },
+    {
+      "uuid": "11111111-1111-4111-8111-000000000003",
+      "type": "http",
+      "documentation": "Return active and archived development projects.",
+      "method": "get",
+      "endpoint": "api/v9/me/projects",
+      "responses": [
+        {
+          "uuid": "21111111-1111-4111-8111-000000000003",
+          "body": "[]",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Projects",
+          "headers": [],
+          "bodyType": "FILE",
+          "filePath": "responses/projects.json",
+          "databucketID": "",
+          "sendFileAsBody": true,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": true,
+          "fallbackTo404": true,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null,
+      "streamingMode": null,
+      "streamingInterval": 0
+    },
+    {
+      "uuid": "11111111-1111-4111-8111-000000000004",
+      "type": "http",
+      "documentation": "Return the running timer or the optional empty state.",
+      "method": "get",
+      "endpoint": "api/v9/me/time_entries/current",
+      "responses": [
+        {
+          "uuid": "21111111-1111-4111-8111-000000000004",
+          "body": "{}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Running timer",
+          "headers": [],
+          "bodyType": "FILE",
+          "filePath": "responses/current-time-entry.json",
+          "databucketID": "",
+          "sendFileAsBody": true,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": true,
+          "fallbackTo404": true,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "31111111-1111-4111-8111-000000000004",
+          "body": "null",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "No running timer",
+          "headers": [],
+          "bodyType": "FILE",
+          "filePath": "responses/current-time-entry.empty.json",
+          "databucketID": "",
+          "sendFileAsBody": true,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": true,
+          "fallbackTo404": true,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null,
+      "streamingMode": null,
+      "streamingInterval": 0
+    },
+    {
+      "uuid": "11111111-1111-4111-8111-000000000005",
+      "type": "http",
+      "documentation": "Return recent stopped entries or the optional empty state.",
+      "method": "get",
+      "endpoint": "api/v9/me/time_entries",
+      "responses": [
+        {
+          "uuid": "21111111-1111-4111-8111-000000000005",
+          "body": "[]",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Recent entries",
+          "headers": [],
+          "bodyType": "FILE",
+          "filePath": "responses/time-entries.json",
+          "databucketID": "",
+          "sendFileAsBody": true,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": true,
+          "fallbackTo404": true,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "31111111-1111-4111-8111-000000000005",
+          "body": "[]",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "No recent entries",
+          "headers": [],
+          "bodyType": "FILE",
+          "filePath": "responses/time-entries.empty.json",
+          "databucketID": "",
+          "sendFileAsBody": true,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": true,
+          "fallbackTo404": true,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null,
+      "streamingMode": null,
+      "streamingInterval": 0
+    },
+    {
+      "uuid": "11111111-1111-4111-8111-000000000006",
+      "type": "http",
+      "documentation": "Return a newly created time entry.",
+      "method": "post",
+      "endpoint": "api/v9/workspaces/:workspaceId/time_entries",
+      "responses": [
+        {
+          "uuid": "21111111-1111-4111-8111-000000000006",
+          "body": "{}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Created time entry",
+          "headers": [],
+          "bodyType": "FILE",
+          "filePath": "responses/create-time-entry.json",
+          "databucketID": "",
+          "sendFileAsBody": true,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": true,
+          "fallbackTo404": true,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null,
+      "streamingMode": null,
+      "streamingInterval": 0
+    },
+    {
+      "uuid": "11111111-1111-4111-8111-000000000007",
+      "type": "http",
+      "documentation": "Return the stopped time entry.",
+      "method": "patch",
+      "endpoint": "api/v9/workspaces/:workspaceId/time_entries/:timeEntryId/stop",
+      "responses": [
+        {
+          "uuid": "21111111-1111-4111-8111-000000000007",
+          "body": "{}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Stopped time entry",
+          "headers": [],
+          "bodyType": "FILE",
+          "filePath": "responses/stop-time-entry.json",
+          "databucketID": "",
+          "sendFileAsBody": true,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": true,
+          "fallbackTo404": true,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null,
+      "streamingMode": null,
+      "streamingInterval": 0
+    },
+    {
+      "uuid": "11111111-1111-4111-8111-000000000008",
+      "type": "http",
+      "documentation": "Return the August 2026 detailed report or the optional empty state.",
+      "method": "post",
+      "endpoint": "reports/api/v3/workspace/:workspaceId/search/time_entries",
+      "responses": [
+        {
+          "uuid": "21111111-1111-4111-8111-000000000008",
+          "body": "[]",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "August 2026 report",
+          "headers": [],
+          "bodyType": "FILE",
+          "filePath": "responses/detailed-report.json",
+          "databucketID": "",
+          "sendFileAsBody": true,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": true,
+          "fallbackTo404": true,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "31111111-1111-4111-8111-000000000008",
+          "body": "[]",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Empty report",
+          "headers": [],
+          "bodyType": "FILE",
+          "filePath": "responses/detailed-report.empty.json",
+          "databucketID": "",
+          "sendFileAsBody": true,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": true,
+          "fallbackTo404": true,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null,
+      "streamingMode": null,
+      "streamingInterval": 0
+    }
+  ],
+  "rootChildren": [
+    {
+      "type": "route",
+      "uuid": "11111111-1111-4111-8111-000000000001"
+    },
+    {
+      "type": "route",
+      "uuid": "11111111-1111-4111-8111-000000000002"
+    },
+    {
+      "type": "route",
+      "uuid": "11111111-1111-4111-8111-000000000003"
+    },
+    {
+      "type": "route",
+      "uuid": "11111111-1111-4111-8111-000000000004"
+    },
+    {
+      "type": "route",
+      "uuid": "11111111-1111-4111-8111-000000000005"
+    },
+    {
+      "type": "route",
+      "uuid": "11111111-1111-4111-8111-000000000006"
+    },
+    {
+      "type": "route",
+      "uuid": "11111111-1111-4111-8111-000000000007"
+    },
+    {
+      "type": "route",
+      "uuid": "11111111-1111-4111-8111-000000000008"
+    }
+  ],
+  "proxyMode": false,
+  "proxyHost": "",
+  "proxyRemovePrefix": false,
+  "tlsOptions": {
+    "enabled": false,
+    "type": "CERT",
+    "pfxPath": "",
+    "certPath": "",
+    "keyPath": "",
+    "caPath": "",
+    "passphrase": ""
+  },
+  "cors": true,
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    },
+    {
+      "key": "Access-Control-Allow-Origin",
+      "value": "*"
+    },
+    {
+      "key": "Access-Control-Allow-Methods",
+      "value": "GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS"
+    },
+    {
+      "key": "Access-Control-Allow-Headers",
+      "value": "Content-Type, Origin, Accept, Authorization, Content-Length, X-Requested-With"
+    }
+  ],
+  "proxyReqHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ],
+  "proxyResHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ],
+  "data": [],
+  "callbacks": []
+}

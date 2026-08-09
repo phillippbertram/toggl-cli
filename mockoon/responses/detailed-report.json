@@ -1,0 +1,122 @@
+[
+  {
+    "id": 81015,
+    "description": "OPS-42: Sprint planning and prioritization",
+    "project_id": 9004,
+    "start": "2026-08-07T15:00:00+02:00",
+    "stop": "2026-08-07T16:30:00+02:00",
+    "seconds": 5400
+  },
+  {
+    "id": 81014,
+    "description": "LOOP-119: Review accessibility feedback",
+    "project_id": 9001,
+    "start": "2026-08-07T11:40:00+02:00",
+    "stop": "2026-08-07T14:25:00+02:00",
+    "seconds": 9900
+  },
+  {
+    "id": 81013,
+    "description": "WEB-73: Polish landing page animations",
+    "project_id": 9002,
+    "start": "2026-08-07T09:00:00+02:00",
+    "stop": "2026-08-07T11:20:00+02:00",
+    "seconds": 8400
+  },
+  {
+    "id": 81012,
+    "description": "Team sync and roadmap review",
+    "project_id": 9004,
+    "start": "2026-08-06T15:30:00+02:00",
+    "stop": "2026-08-06T17:00:00+02:00",
+    "seconds": 5400
+  },
+  {
+    "id": 81011,
+    "description": "LOOP-128: Refine onboarding flow",
+    "project_id": 9001,
+    "start": "2026-08-06T12:45:00+02:00",
+    "stop": "2026-08-06T15:15:00+02:00",
+    "seconds": 9000
+  },
+  {
+    "id": 81010,
+    "description": "LOOP-121: Implement project overview",
+    "project_id": 9001,
+    "start": "2026-08-06T08:30:00+02:00",
+    "stop": "2026-08-06T11:45:00+02:00",
+    "seconds": 11700
+  },
+  {
+    "id": 81009,
+    "description": "LOOP-108: Prepare release notes",
+    "project_id": 9003,
+    "start": "2026-08-05T16:00:00+02:00",
+    "stop": "2026-08-05T17:00:00+02:00",
+    "seconds": 3600
+  },
+  {
+    "id": 81008,
+    "description": "LOOP-114: Improve empty states",
+    "project_id": 9001,
+    "start": "2026-08-05T13:00:00+02:00",
+    "stop": "2026-08-05T15:40:00+02:00",
+    "seconds": 9600
+  },
+  {
+    "id": 81007,
+    "description": "LOOP-119: Review accessibility feedback",
+    "project_id": 9001,
+    "start": "2026-08-05T09:10:00+02:00",
+    "stop": "2026-08-05T12:00:00+02:00",
+    "seconds": 10200
+  },
+  {
+    "id": 81006,
+    "description": "OPS-42: Sprint planning and prioritization",
+    "project_id": 9004,
+    "start": "2026-08-04T14:20:00+02:00",
+    "stop": "2026-08-04T16:35:00+02:00",
+    "seconds": 8100
+  },
+  {
+    "id": 81005,
+    "description": "LOOP-121: Implement project overview",
+    "project_id": 9001,
+    "start": "2026-08-04T11:00:00+02:00",
+    "stop": "2026-08-04T13:30:00+02:00",
+    "seconds": 9000
+  },
+  {
+    "id": 81004,
+    "description": "LOOP-128: Refine onboarding flow",
+    "project_id": 9001,
+    "start": "2026-08-04T08:45:00+02:00",
+    "stop": "2026-08-04T10:45:00+02:00",
+    "seconds": 7200
+  },
+  {
+    "id": 81003,
+    "description": "WEB-73: Polish landing page animations",
+    "project_id": 9002,
+    "start": "2026-08-03T14:00:00+02:00",
+    "stop": "2026-08-03T17:10:00+02:00",
+    "seconds": 11400
+  },
+  {
+    "id": 81002,
+    "description": "LOOP-121: Implement project overview",
+    "project_id": 9001,
+    "start": "2026-08-03T11:30:00+02:00",
+    "stop": "2026-08-03T13:00:00+02:00",
+    "seconds": 5400
+  },
+  {
+    "id": 81001,
+    "description": "LOOP-128: Refine onboarding flow",
+    "project_id": 9001,
+    "start": "2026-08-03T09:00:00+02:00",
+    "stop": "2026-08-03T11:15:00+02:00",
+    "seconds": 8100
+  }
+]

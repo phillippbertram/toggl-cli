@@ -77,6 +77,22 @@ project. It does not modify the original stopped entry.
 If a timer is already running, `start` and `resume` ask before replacing it.
 Pass `--yes` to confirm the switch without a prompt.
 
+## Configuration
+
+Non-secret settings are stored in `~/.tgl/config.json`. The API token is kept
+separately in macOS Keychain and is never written to this file.
+
+| Setting         | Command                | Behavior                                   |
+| --------------- | ---------------------- | ------------------------------------------ |
+| Workspace       | `tgl config workspace` | Selects the workspace used by all commands |
+| Default project | `tgl config project`   | Sets the project suggested for new timers  |
+| Config path     | `tgl config path`      | Prints the active configuration file path  |
+
+`TOGGL_API_TOKEN` overrides the token stored in Keychain. `TGL_CONFIG_DIR` can
+override the configuration directory for isolated development environments.
+Existing installations using the previous macOS Preferences path are migrated
+automatically; the original file is retained as a backup.
+
 ## Debug logging
 
 Use the global verbosity option when diagnosing a problem:
@@ -96,31 +112,10 @@ tgl -vvv auth status
 Debug logs are written to stderr. API tokens, authorization headers, and
 request or response bodies are never logged.
 
-## Dashboard shortcuts
-
-| Key       | Action                            |
-| --------- | --------------------------------- |
-| `n`       | Start a new timer                 |
-| `e`       | Open the resume list              |
-| `s`       | Stop the running timer            |
-| `↑` / `↓` | Select a recent entry             |
-| `Enter`   | Resume the selected entry         |
-| `m`       | Toggle current and previous month |
-| `r`       | Refresh data                      |
-| `?`       | Show help                         |
-| `q`       | Quit                              |
-
 ## Development
 
-```sh
-pnpm run typecheck
-pnpm run lint
-pnpm run format:check
-pnpm run build
-```
-
-`pnpm run check` runs all validation steps. The MVP intentionally has no
-automated unit-test suite.
+Contributor setup, validation commands, and local API development are
+documented in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Support
 

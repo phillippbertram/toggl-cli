@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import {Command} from 'commander';
+import {config as loadEnvironment} from 'dotenv';
 import pc from 'picocolors';
 
 import {
@@ -22,6 +23,8 @@ import {TglError, errorMessage} from './errors.js';
 import {configureVerbosity, createLogger} from './logger.js';
 import {SessionService} from './services/session.js';
 import {launchTui} from './tui/app.js';
+
+loadEnvironment({quiet: true});
 
 const config = new ConfigStore();
 const credentials = new CredentialStore(config);
