@@ -3,86 +3,72 @@ import {z} from 'zod';
 const nullableNumber = z.number().nullable().optional();
 const nullableString = z.string().nullable().optional();
 
-export const UserSchema = z
-  .object({
-    id: z.number(),
-    email: z.string().email(),
-    fullname: z.string().default(''),
-    timezone: z.string().min(1).default('Etc/UTC'),
-    default_workspace_id: nullableNumber,
-  })
-  .passthrough();
+export const UserSchema = z.looseObject({
+  id: z.number(),
+  email: z.email(),
+  fullname: z.string().default(''),
+  timezone: z.string().min(1).default('Etc/UTC'),
+  default_workspace_id: nullableNumber,
+});
 
 export type TogglUser = z.infer<typeof UserSchema>;
 
-export const WorkspaceSchema = z
-  .object({
-    id: z.number(),
-    name: z.string().min(1),
-  })
-  .passthrough();
+export const WorkspaceSchema = z.looseObject({
+  id: z.number(),
+  name: z.string().min(1),
+});
 
 export type Workspace = z.infer<typeof WorkspaceSchema>;
 
-export const ProjectSchema = z
-  .object({
-    id: z.number(),
-    name: z.string().min(1),
-    workspace_id: z.number().optional(),
-    wid: z.number().optional(),
-    active: z.boolean().default(true),
-    can_track_time: z.boolean().default(true),
-  })
-  .passthrough();
+export const ProjectSchema = z.looseObject({
+  id: z.number(),
+  name: z.string().min(1),
+  workspace_id: z.number().optional(),
+  wid: z.number().optional(),
+  active: z.boolean().default(true),
+  can_track_time: z.boolean().default(true),
+});
 
 export type Project = z.infer<typeof ProjectSchema>;
 
-export const TimeEntrySchema = z
-  .object({
-    id: z.number(),
-    workspace_id: z.number().optional(),
-    wid: z.number().optional(),
-    project_id: nullableNumber,
-    pid: nullableNumber,
-    project_name: nullableString,
-    description: nullableString,
-    start: z.string().min(1),
-    stop: nullableString,
-    duration: z.number(),
-  })
-  .passthrough();
+export const TimeEntrySchema = z.looseObject({
+  id: z.number(),
+  workspace_id: z.number().optional(),
+  wid: z.number().optional(),
+  project_id: nullableNumber,
+  pid: nullableNumber,
+  project_name: nullableString,
+  description: nullableString,
+  start: z.string().min(1),
+  stop: nullableString,
+  duration: z.number(),
+});
 
 export type TimeEntry = z.infer<typeof TimeEntrySchema>;
 
-export const ReportRowSchema = z
-  .object({
-    id: z.number(),
-    description: nullableString,
-    project_id: nullableNumber,
-    start: z.string().min(1),
-    stop: nullableString,
-    seconds: z.number().nonnegative().optional(),
-  })
-  .passthrough();
+export const ReportRowSchema = z.looseObject({
+  id: z.number(),
+  description: nullableString,
+  project_id: nullableNumber,
+  start: z.string().min(1),
+  stop: nullableString,
+  seconds: z.number().nonnegative().optional(),
+});
 
 export type ReportRow = z.infer<typeof ReportRowSchema>;
 
-const ReportTimeEntrySchema = z
-  .object({
-    id: z.number(),
-    start: z.string().min(1),
-    stop: nullableString,
-    seconds: z.number().nonnegative(),
-  })
-  .passthrough();
+const ReportTimeEntrySchema = z.looseObject({
+  id: z.number(),
+  start: z.string().min(1),
+  stop: nullableString,
+  seconds: z.number().nonnegative(),
+});
 
-const ReportGroupSchema = z
-  .object({
-    description: nullableString,
-    project_id: nullableNumber,
-    time_entries: z.array(ReportTimeEntrySchema),
-  })
-  .passthrough();
+const ReportGroupSchema = z.looseObject({
+  description: nullableString,
+  project_id: nullableNumber,
+  time_entries: z.array(ReportTimeEntrySchema),
+});
 
 export const WorkspaceListSchema = z.union([
   z.array(WorkspaceSchema),
