@@ -82,17 +82,18 @@ CLI from another directory before using the real Toggl API again.
 
 ### Available routes
 
-| Method  | Route                                                            | Response file                       |
-| ------- | ---------------------------------------------------------------- | ----------------------------------- |
-| `GET`   | `/api/v9/me`                                                     | `responses/me.json`                 |
-| `GET`   | `/api/v9/me/workspaces`                                          | `responses/workspaces.json`         |
-| `GET`   | `/api/v9/me/projects`                                            | `responses/projects.json`           |
-| `GET`   | `/api/v9/me/time_entries/current`                                | `responses/current-time-entry.json` |
-| `GET`   | `/api/v9/me/time_entries`                                        | `responses/time-entries.json`       |
-| `POST`  | `/api/v9/workspaces/:workspaceId/time_entries`                   | `responses/create-time-entry.json`  |
-| `PATCH` | `/api/v9/workspaces/:workspaceId/time_entries/:timeEntryId/stop` | `responses/stop-time-entry.json`    |
-| `PUT`   | `/api/v9/workspaces/:workspaceId/time_entries/:timeEntryId`      | `responses/update-time-entry.json`  |
-| `POST`  | `/reports/api/v3/workspace/:workspaceId/search/time_entries`     | `responses/detailed-report.json`    |
+| Method   | Route                                                            | Response file                                                         |
+| -------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `GET`    | `/api/v9/me`                                                     | `responses/me.json`                                                   |
+| `GET`    | `/api/v9/me/workspaces`                                          | `responses/workspaces.json`                                           |
+| `GET`    | `/api/v9/me/projects`                                            | `responses/projects.json`                                             |
+| `GET`    | `/api/v9/me/time_entries/current`                                | `responses/current-time-entry.json`                                   |
+| `GET`    | `/api/v9/me/time_entries`                                        | `responses/time-entries.json`                                         |
+| `POST`   | `/api/v9/workspaces/:workspaceId/time_entries`                   | `responses/create-time-entry.json` or `create-manual-time-entry.json` |
+| `PATCH`  | `/api/v9/workspaces/:workspaceId/time_entries/:timeEntryId/stop` | `responses/stop-time-entry.json`                                      |
+| `PUT`    | `/api/v9/workspaces/:workspaceId/time_entries/:timeEntryId`      | `responses/update-time-entry.json`                                    |
+| `DELETE` | `/api/v9/workspaces/:workspaceId/time_entries/:timeEntryId`      | Status-only response                                                  |
+| `POST`   | `/reports/api/v3/workspace/:workspaceId/search/time_entries`     | `responses/detailed-report.json`                                      |
 
 The detailed report represents August 2026 in the `Europe/Berlin` timezone. Do
 not add `x-next-*` headers unless pagination is being tested: without them,
@@ -108,7 +109,8 @@ Mockoon includes alternative responses for empty states:
 
 Select an alternative response in Mockoon when testing the corresponding state.
 
-The mock is intentionally static. Start, stop, and rounded update requests
-return realistic responses, but they do not modify subsequent responses.
-Switch the current time entry route between its regular and empty response when
-testing both states.
+The mock is intentionally static. Start, manual add, stop, delete, and rounded
+update requests return realistic responses, but they do not modify subsequent
+responses. Select the completed-entry response for the create route when
+testing `tgl add`. Switch the current time entry route between its regular and
+empty response when testing both states.

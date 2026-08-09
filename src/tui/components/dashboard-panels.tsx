@@ -1,4 +1,5 @@
 import {Spinner, StatusMessage} from '@inkjs/ui';
+import {DateTime} from 'luxon';
 import {Box, Text} from 'ink';
 
 import {
@@ -17,14 +18,14 @@ import type {Loadable} from '../types.js';
 export const Header = ({
   email,
   workspace,
-  month,
+  date,
   current,
   now,
   compact,
 }: {
   email: string;
   workspace: string;
-  month: string;
+  date: string;
   current: Loadable<TimeEntry | null>;
   now: number;
   compact: boolean;
@@ -46,7 +47,7 @@ export const Header = ({
         </Text>
         <Box flexGrow={1} minWidth={0} marginX={1}>
           <Text wrap="truncate-end">
-            {workspace} · {month}
+            {workspace} · {date}
           </Text>
         </Box>
         {!compact && (
@@ -95,16 +96,22 @@ const formatLiveDuration = (seconds: number): string => {
     .join(':');
 };
 
-export const HistoryPanel = ({
+export const DayEntriesPanel = ({
   state,
   selected,
   width,
   visibleCount,
+  timezone,
+  totalSeconds,
+  compact,
 }: {
   state: Loadable<TimeEntry[]>;
   selected: number;
   width: number | string;
   visibleCount: number;
+  timezone: string;
+  totalSeconds: number;
+  compact: boolean;
 }) => {
   const firstVisible = Math.max(0, selected - visibleCount + 1);
   const entries = (state.data ?? [])
@@ -118,27 +125,75 @@ export const HistoryPanel = ({
       borderColor="gray"
       paddingX={1}
       width={width}
-      height={visibleCount + 3}
+      height={visibleCount + 4}
       overflowY="hidden"
     >
-      <Text bold>Recent entries</Text>
+      <Box width="100%">
+        <Box flexGrow={1}>
+          <Text bold>Time entries</Text>
+        </Box>
+        <Text color="cyan" bold>
+          Total {formatDuration(totalSeconds)}
+        </Text>
+      </Box>
+      <Box width="100%">
+        <Box width={9} marginRight={1}>
+          <Text dimColor>Start</Text>
+        </Box>
+        <Box width={8} marginRight={1}>
+          <Text dimColor>Duration</Text>
+        </Box>
+        <Box flexGrow={1} minWidth={0}>
+          <Text dimColor>Description</Text>
+        </Box>
+        {!compact && (
+          <Box width={24} marginLeft={1}>
+            <Text dimColor>Project</Text>
+          </Box>
+        )}
+      </Box>
       {state.loading && !state.data ? (
-        <Spinner label="Loading history" />
+        <Spinner label="Loading time entries" />
       ) : state.error ? (
         <StatusMessage variant="error">{state.error}</StatusMessage>
       ) : entries.length === 0 ? (
-        <Text dimColor>No stopped entries in the last 90 days.</Text>
+        <Text dimColor>No completed entries on this day.</Text>
       ) : (
         entries.map(({entry, absoluteIndex}) => (
-          <Text
-            key={entry.id}
-            color={absoluteIndex === selected ? 'magenta' : undefined}
-            wrap="truncate-end"
-          >
-            {absoluteIndex === selected ? '› ' : '  '}
-            {timeEntryDescription(entry)}
-            {entry.project_name ? ` · ${entry.project_name}` : ''}
-          </Text>
+          <Box key={entry.id} width="100%">
+            <Box width={9} marginRight={1}>
+              <Text color={absoluteIndex === selected ? 'magenta' : undefined}>
+                {absoluteIndex === selected ? '› ' : '  '}
+                {DateTime.fromISO(entry.start)
+                  .setZone(timezone)
+                  .toFormat('HH:mm')}
+              </Text>
+            </Box>
+            <Box width={8} marginRight={1}>
+              <Text color={absoluteIndex === selected ? 'magenta' : undefined}>
+                {formatDuration(entry.duration)}
+              </Text>
+            </Box>
+            <Box flexGrow={1} minWidth={0}>
+              <Text
+                color={absoluteIndex === selected ? 'magenta' : undefined}
+                wrap="truncate-end"
+              >
+                {timeEntryDescription(entry)}
+              </Text>
+            </Box>
+            {!compact && (
+              <Box width={24} marginLeft={1}>
+                <Text
+                  color={absoluteIndex === selected ? 'magenta' : undefined}
+                  dimColor={absoluteIndex !== selected}
+                  wrap="truncate-end"
+                >
+                  {timeEntryProjectLabel(entry)}
+                </Text>
+              </Box>
+            )}
+          </Box>
         ))
       )}
     </Box>

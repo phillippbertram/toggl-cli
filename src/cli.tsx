@@ -5,6 +5,7 @@ import {config as loadEnvironment} from 'dotenv';
 import pc from 'picocolors';
 
 import {
+  addCommand,
   authStatusCommand,
   configureProjectCommand,
   configureRoundingCommand,
@@ -19,6 +20,7 @@ import {
   statusCommand,
   stopCommand,
   type CommandContext,
+  type AddOptions,
   type ConfigDisplayOptions,
   type ConfigScopeOptions,
   type StartOptions,
@@ -147,6 +149,31 @@ Examples:
 Without a description, tgl prompts for one. Without a project option, the last
 successfully used project is reused. If the same timer is already running, the
 command succeeds without restarting it.`,
+);
+
+const add = program
+  .command('add')
+  .description('Add a completed time entry')
+  .argument('[description...]', 'time entry description')
+  .option('--start <time>', 'start as HH:mm or YYYY-MM-DD HH:mm')
+  .option('--end <time>', 'end as HH:mm or YYYY-MM-DD HH:mm')
+  .option('--date <date>', 'shared date in YYYY-MM-DD format')
+  .option('-p, --project <project>', 'project ID or name')
+  .option('--no-project', 'add without a project')
+  .action(async (description: string[], options: AddOptions) =>
+    addCommand(context, description, options),
+  );
+add.addHelpText(
+  'after',
+  `
+Examples:
+  tgl add "Client meeting" --start 15:45 --end 17:00
+  tgl add "Client meeting" --date 2026-08-09 --start 15:45 --end 17:00
+  tgl add "Night work" --start "2026-08-09 23:00" --end 01:00 -p Internal
+
+Time-only values use today in your Toggl timezone. A date supplied once applies
+to both boundaries. If an undated end is earlier than its start, it is moved to
+the following day with a warning. Manual entries are never rounded.`,
 );
 
 const resume = addRoundingOptions(

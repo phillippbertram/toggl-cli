@@ -14,6 +14,10 @@ import type {CredentialStore} from './credentials.js';
 import {TOKEN_ENVIRONMENT_VARIABLE} from './credentials.js';
 import {TglError, UserCancelledError} from './errors.js';
 import {
+  resolveManualEntryInterval,
+  type ManualEntryInterval,
+} from './manual-entry.js';
+import {
   timeEntryDescription,
   timeEntryProjectId,
   timeEntryProjectLabel,
@@ -42,6 +46,7 @@ import {
   type ValidatedLogin,
 } from './services/session.js';
 import {
+  createManualTimeEntry,
   startTimer,
   stopCurrentTimer,
   trackedSeconds,
@@ -52,6 +57,13 @@ export type StartOptions = RoundingOptions & {
   project?: string | false;
   replace?: boolean;
   yes?: boolean;
+};
+
+export type AddOptions = {
+  start?: string;
+  end?: string;
+  date?: string;
+  project?: string | false;
 };
 
 export type StopOptions = RoundingOptions;
@@ -361,6 +373,67 @@ export const startCommand = async (
   });
   context.config.setProject(projectId);
   printStartResult(result, 'Started', projects, session.user.timezone);
+};
+
+export const addCommand = async (
+  context: CommandContext,
+  descriptionParts: string[],
+  options: AddOptions,
+): Promise<void> => {
+  let description = descriptionParts.join(' ').trim();
+  let start = options.start?.trim() ?? '';
+  let end = options.end?.trim() ?? '';
+  const missing = [
+    ...(!description ? ['description'] : []),
+    ...(!start ? ['--start'] : []),
+    ...(!end ? ['--end'] : []),
+  ];
+  if (missing.length > 0 && !process.stdin.isTTY) {
+    throw new TglError(
+      `Missing ${missing.join(', ')}. Run in an interactive terminal or provide all required values.`,
+      2,
+    );
+  }
+
+  const session = await context.sessions.create();
+  if (!description) {
+    description = await requiredInput('Description');
+  }
+  if (!start) {
+    start = await requiredInput('Start (HH:mm or YYYY-MM-DD HH:mm)');
+  }
+  if (!end) {
+    end = await requiredInput('End (HH:mm or YYYY-MM-DD HH:mm)');
+  }
+
+  const interval = resolveManualEntryInterval({
+    start,
+    end,
+    date: options.date,
+    timezone: session.user.timezone,
+  });
+  printManualIntervalWarnings(interval);
+
+  const projects =
+    options.project === false
+      ? []
+      : await activeProjects(session.client, session.workspaceId);
+  const projectId = await resolveProjectOption(
+    projects,
+    options.project,
+    context.config.load().projectId ?? null,
+  );
+  const entry = await createManualTimeEntry({
+    client: session.client,
+    workspaceId: session.workspaceId,
+    description,
+    projectId,
+    interval,
+  });
+  context.config.setProject(projectId);
+  success(
+    `Added ${entrySummary(entry, projects)} · ${manualIntervalLabel(interval)} · ${formatDuration(interval.duration)}.`,
+  );
 };
 
 export const resumeCommand = async (
@@ -735,6 +808,29 @@ const resolveProjectOption = async (
     ? fallbackProjectId
     : null;
 };
+
+const requiredInput = (message: string): Promise<string> =>
+  input({
+    message,
+    validate: (value) => value.trim().length > 0 || 'A value is required.',
+    theme: {prefix: pc.magenta('tgl')},
+  });
+
+const printManualIntervalWarnings = (interval: ManualEntryInterval): void => {
+  if (interval.overnight) {
+    warning(
+      `End is earlier than start; using ${interval.stopLocal.toFormat('yyyy-MM-dd HH:mm')} on the following day.`,
+    );
+  }
+  if (interval.future) {
+    warning(
+      `End ${interval.stopLocal.toFormat('yyyy-MM-dd HH:mm')} is in the future; creating the completed entry anyway.`,
+    );
+  }
+};
+
+const manualIntervalLabel = (interval: ManualEntryInterval): string =>
+  `${interval.startLocal.toFormat('yyyy-MM-dd HH:mm')} → ${interval.stopLocal.toFormat('yyyy-MM-dd HH:mm')}`;
 
 const resolveResumeProject = async (
   projects: Project[],

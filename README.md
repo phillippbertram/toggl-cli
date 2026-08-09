@@ -62,6 +62,10 @@ tgl stop --round 5 --round-mode up
 tgl stop --no-round
 tgl status
 
+tgl add "Client meeting" --start 15:45 --end 17:00
+tgl add "Client meeting" --date 2026-08-09 --start 15:45 --end 17:00
+tgl add "Night work" --start "2026-08-09 23:00" --end 01:00 -p Internal
+
 tgl resume
 tgl resume "Initial project setup"
 tgl resume APP-42
@@ -90,6 +94,13 @@ tgl config path
 
 `resume` creates a new running time entry using the previous description and
 project. It does not modify the original stopped entry.
+
+`add` creates a completed time entry without affecting a running timer. Missing
+description or time values are prompted for in an interactive terminal. Times
+may use `HH:mm` for today or `YYYY-MM-DD HH:mm`; `--date` applies one date to
+both boundaries. If an undated end is earlier than the start, it is moved to the
+following day with a warning. Future end times are also warned about but remain
+allowed. Explicit manual times are never rounded.
 
 Descriptions are free-form. An optional prefix such as `APP-42:` is recognized
 as a reference for report grouping and resume searches, without requiring a
@@ -187,6 +198,17 @@ Rounding changes the stored Toggl timestamps rather than only changing report
 display. A rounded end that would precede its stored start is limited to the
 start, producing a zero-minute entry. Only timers started or stopped through
 `tgl` receive automatic rounding; actions in other Toggl clients are unchanged.
+
+## Fullscreen dashboard
+
+The default `tgl` dashboard focuses on one day at a time. It shows completed
+entries with start time and duration, the running timer, a live day total, and a
+compact summary of the effective workspace, project, rounding, and timezone.
+
+Use the arrow keys to change the selected entry or day. Press `a` to add a
+completed entry, `d` to delete the selected entry after confirmation, and
+`Enter` to resume it. The month report is available in a separate view through
+`m`; press `?` for the complete shortcut list.
 
 `TOGGL_API_TOKEN` overrides the token stored in Keychain. `TGL_CONFIG_DIR` can
 override the global configuration directory for isolated development

@@ -12,6 +12,7 @@ import {
   type RoundingAdjustment,
   type RoundingRule,
 } from '../rounding.js';
+import type {ManualEntryInterval} from '../manual-entry.js';
 
 const DescriptionSchema = z.string().trim().min(1, 'Description is required.');
 
@@ -28,6 +29,25 @@ export type StartTimerResult = {
 export type StopTimerResult = {
   entry: TimeEntry;
   rounding?: RoundingAdjustment;
+};
+
+export const createManualTimeEntry = async (input: {
+  client: Pick<TogglApiClient, 'createTimeEntry'>;
+  workspaceId: number;
+  description: string;
+  projectId: number | null;
+  interval: ManualEntryInterval;
+}): Promise<TimeEntry> => {
+  const description = DescriptionSchema.parse(input.description);
+  return input.client.createTimeEntry({
+    kind: 'completed',
+    workspaceId: input.workspaceId,
+    description,
+    projectId: input.projectId,
+    start: input.interval.start,
+    stop: input.interval.stop,
+    duration: input.interval.duration,
+  });
 };
 
 type TrackingClient = Pick<
@@ -77,6 +97,7 @@ export const startTimer = async (input: {
   try {
     const start = resolveStartTime(input.startRounding, input.clock);
     const entry = await input.client.createTimeEntry({
+      kind: 'running',
       workspaceId: input.workspaceId,
       description,
       projectId: input.projectId,

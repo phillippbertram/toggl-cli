@@ -25,6 +25,20 @@ type RequestResult<T> = {
   headers: Headers;
 };
 
+export type CreateTimeEntryInput = {
+  workspaceId: number;
+  description: string;
+  projectId: number | null;
+} & (
+  | {kind: 'running'; start?: string}
+  | {
+      kind: 'completed';
+      start: string;
+      stop: string;
+      duration: number;
+    }
+);
+
 export class TogglApiClient {
   readonly #authorization: string;
   readonly #apiBaseUrl: string;
@@ -41,7 +55,7 @@ export class TogglApiClient {
   }
 
   async #request<T>(
-    method: 'GET' | 'POST' | 'PATCH' | 'PUT',
+    method: 'DELETE' | 'GET' | 'POST' | 'PATCH' | 'PUT',
     url: URL,
     schema: z.ZodType<T>,
     body?: unknown,
@@ -171,19 +185,25 @@ export class TogglApiClient {
     return (await this.#request('GET', url, TimeEntryListSchema)).data;
   }
 
-  public async createTimeEntry(input: {
-    workspaceId: number;
-    description: string;
-    projectId: number | null;
-    start?: string;
-  }): Promise<TimeEntry> {
+  public async createTimeEntry(
+    input: CreateTimeEntryInput,
+  ): Promise<TimeEntry> {
+    if (input.kind === 'completed' && input.duration <= 0) {
+      throw new TglError('A completed time entry needs a positive duration.');
+    }
     const body: Record<string, unknown> = {
       created_with: 'tgl',
       description: input.description,
-      duration: -1,
-      start: input.start ?? new Date().toISOString(),
+      duration: input.kind === 'running' ? -1 : input.duration,
+      start:
+        input.kind === 'running'
+          ? (input.start ?? new Date().toISOString())
+          : input.start,
       workspace_id: input.workspaceId,
     };
+    if (input.kind === 'completed') {
+      body.stop = input.stop;
+    }
     if (input.projectId !== null) {
       body.project_id = input.projectId;
     }
@@ -198,6 +218,19 @@ export class TogglApiClient {
         body,
       )
     ).data;
+  }
+
+  public async deleteTimeEntry(
+    workspaceId: number,
+    timeEntryId: number,
+  ): Promise<void> {
+    await this.#request(
+      'DELETE',
+      new URL(
+        `${this.#apiBaseUrl}/workspaces/${workspaceId}/time_entries/${timeEntryId}`,
+      ),
+      z.null(),
+    );
   }
 
   public async stopTimeEntry(entry: TimeEntry): Promise<TimeEntry> {
