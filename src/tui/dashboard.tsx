@@ -83,6 +83,30 @@ export const Dashboard = ({
   const [now, setNow] = useState(Date.now());
 
   const reportMonth = monthKey(session.user.timezone, monthOffset);
+  const isWide = columns >= 100;
+  const panelFrameRows = 3;
+  const stackedPanelGapRows = 1;
+  const footerRows = columns >= 120 ? 1 : 2;
+  const screenPaddingRows = 2;
+  const headerRows = 2;
+  const timerRows = 4;
+  const messageRows = message ? 2 : 0;
+  const chromeRows =
+    screenPaddingRows + headerRows + timerRows + messageRows + footerRows;
+  const availableBodyRows = Math.max(4, rows - chromeRows);
+  const compactReportContentRows = report.data
+    ? 2 + Math.min(5, report.data.byIssue.length)
+    : 1;
+  const compactReportRows = panelFrameRows + compactReportContentRows;
+  const historyVisibleCount = Math.max(
+    1,
+    isWide
+      ? availableBodyRows - panelFrameRows
+      : availableBodyRows -
+          compactReportRows -
+          stackedPanelGapRows -
+          panelFrameRows,
+  );
 
   const refreshCurrent = useCallback(async () => {
     setCurrent((previous) => ({...previous, loading: true, error: undefined}));
@@ -368,20 +392,21 @@ export const Dashboard = ({
         </Box>
       )}
       <Box
-        flexDirection={columns >= 100 ? 'row' : 'column'}
+        flexDirection={isWide ? 'row' : 'column'}
         flexGrow={1}
         gap={1}
+        overflowY="hidden"
       >
         <HistoryPanel
           state={history}
           selected={selectedHistory}
-          width={columns >= 100 ? '45%' : '100%'}
-          compact={rows < 28}
+          width={isWide ? '45%' : '100%'}
+          visibleCount={historyVisibleCount}
         />
         <ReportPanel
           state={report}
-          width={columns >= 100 ? '55%' : '100%'}
-          compact={columns < 100 || rows < 32}
+          width={isWide ? '55%' : '100%'}
+          compact={!isWide || rows < 32}
         />
       </Box>
       <Text dimColor>

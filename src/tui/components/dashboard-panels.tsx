@@ -70,14 +70,13 @@ export const HistoryPanel = ({
   state,
   selected,
   width,
-  compact,
+  visibleCount,
 }: {
   state: Loadable<TimeEntry[]>;
   selected: number;
   width: number | string;
-  compact: boolean;
+  visibleCount: number;
 }) => {
-  const visibleCount = compact ? 3 : 7;
   const firstVisible = Math.max(0, selected - visibleCount + 1);
   const entries = (state.data ?? [])
     .slice(firstVisible, firstVisible + visibleCount)
@@ -90,6 +89,8 @@ export const HistoryPanel = ({
       borderColor="gray"
       paddingX={1}
       width={width}
+      height={visibleCount + 3}
+      overflowY="hidden"
     >
       <Text bold>Recent entries</Text>
       {state.loading && !state.data ? (
