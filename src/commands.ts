@@ -101,7 +101,7 @@ export const configureWorkspaceCommand = async (
   context.config.update({
     workspaceId: workspace.id,
     workspaceName: workspace.name,
-    lastProjectId: null,
+    projectId: null,
   });
   success(`Workspace set to ${workspace.name}.`);
 };
@@ -113,9 +113,9 @@ export const configureProjectCommand = async (
   const projects = await activeProjects(session.client, session.workspaceId);
   const projectId = await chooseProject(
     projects,
-    context.config.load().lastProjectId ?? null,
+    context.config.load().projectId ?? null,
   );
-  context.config.setLastProject(projectId);
+  context.config.setProject(projectId);
   const project = projects.find((candidate) => candidate.id === projectId);
   success(
     project
@@ -148,7 +148,7 @@ export const startCommand = async (
   const projectId = await resolveProjectOption(
     projects,
     options.project,
-    context.config.load().lastProjectId ?? null,
+    context.config.load().projectId ?? null,
   );
   const result = await startTimer({
     client: session.client,
@@ -159,7 +159,7 @@ export const startCommand = async (
       confirmTimerSwitch(current, options.replace || options.yes),
     forceReplace: options.replace || options.yes,
   });
-  context.config.setLastProject(projectId);
+  context.config.setProject(projectId);
   printStartResult(result, 'Started', projects);
 };
 
@@ -209,7 +209,7 @@ export const resumeCommand = async (
       confirmTimerSwitch(current, options.replace || options.yes),
     forceReplace: options.replace || options.yes,
   });
-  context.config.setLastProject(projectId);
+  context.config.setProject(projectId);
   printStartResult(result, 'Resumed', projects);
 };
 

@@ -222,7 +222,7 @@ export const Dashboard = ({
           },
           forceReplace: request.confirmedTimerId !== undefined,
         });
-        context.config.setLastProject(request.projectId);
+        context.config.setProject(request.projectId);
         setMessage({
           variant: 'success',
           text: result.alreadyRunning
@@ -263,7 +263,7 @@ export const Dashboard = ({
       const description = value.trim();
       if (!description) return;
 
-      const configuredProjectId = context.config.load().lastProjectId ?? null;
+      const configuredProjectId = context.config.load().projectId ?? null;
       const projectId =
         projects.data &&
         !projects.data.some((project) => project.id === configuredProjectId)
@@ -579,7 +579,7 @@ const newTimerProjectLabel = (
   context: CommandContext,
   projects: Loadable<Project[]>,
 ): string => {
-  const projectId = context.config.load().lastProjectId ?? null;
+  const projectId = context.config.load().projectId ?? null;
   if (projectId === null) return 'No project';
   return (
     projects.data?.find((project) => project.id === projectId)?.name ??

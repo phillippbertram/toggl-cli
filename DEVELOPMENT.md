@@ -15,8 +15,9 @@ During development, build and start the CLI with:
 pnpm dev
 ```
 
-The MVP intentionally has no automated unit-test suite. `pnpm check` runs the
-TypeScript typecheck, ESLint, Prettier check, and production build.
+`pnpm check` runs the TypeScript typecheck, ESLint, Prettier check, production
+build, and the focused configuration tests. Run the tests independently with
+`pnpm test`.
 
 ## Local Toggl API with Mockoon
 
@@ -63,9 +64,10 @@ take precedence, and `.env` is ignored by Git.
 
 Select `Infinite Loop Labs` during the one-time workspace setup. The separate
 configuration directory keeps the mock workspace, user identity, timezone, and
-last project separate. Without it, configuring Mockoon would overwrite parts of
-the regular `tgl` configuration. `TGL_CONFIG_DIR` is not needed when using the
-real Toggl API.
+last project separate in `/tmp/tgl-mock-development/config.yaml`. Without it,
+configuring Mockoon would overwrite parts of the regular `tgl` configuration.
+`TGL_CONFIG_DIR` is not needed when using the real Toggl API and does not affect
+the upward search for a local `.tglrc`.
 
 For verbose request diagnostics, run for example:
 

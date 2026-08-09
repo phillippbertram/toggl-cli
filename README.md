@@ -89,23 +89,41 @@ existing timer running instead of restarting it.
 
 ## Configuration
 
-Non-secret settings are stored in `~/.tgl/config.json`. The API token is kept
+Non-secret settings are stored in `~/.tgl/config.yaml`. The API token is kept
 separately in macOS Keychain and is never written to this file.
 
-| Setting                | Command                | Behavior                                   |
-| ---------------------- | ---------------------- | ------------------------------------------ |
-| Workspace              | `tgl config workspace` | Selects the workspace used by all commands |
-| Project for new timers | `tgl config project`   | Changes the currently remembered project   |
-| Config path            | `tgl config path`      | Prints the active configuration file path  |
+| Setting                | Command                | Behavior                                       |
+| ---------------------- | ---------------------- | ---------------------------------------------- |
+| Workspace              | `tgl config workspace` | Selects the global workspace                   |
+| Project for new timers | `tgl config project`   | Changes the globally remembered project        |
+| Config paths           | `tgl config path`      | Prints the global and discovered local sources |
 
 The project used by a successful `start` or `resume` becomes the remembered
 project for the next new timer. It can always be overridden with `--project` or
 removed with `--no-project`.
 
+Projects can also provide a read-only `.tglrc` file containing YAML:
+
+```yaml
+workspaceId: 123456
+projectId: 789012
+```
+
+`tgl` searches from the current directory towards the filesystem root and uses
+the nearest `.tglrc`. The local `workspaceId` and `projectId` override their
+global values; account identity and Keychain settings always remain global.
+Use `projectId: null` to default to no project. If a local workspace is set
+without a project, the global project is not inherited because project IDs are
+workspace-specific.
+
+The local file is never created or modified by `tgl`. Login, logout, successful
+timer starts, and all `tgl config` commands continue to update only
+`~/.tgl/config.yaml`.
+
 `TOGGL_API_TOKEN` overrides the token stored in Keychain. `TGL_CONFIG_DIR` can
-override the configuration directory for isolated development environments.
-Existing installations using the previous macOS Preferences path are migrated
-automatically; the original file is retained as a backup.
+override the global configuration directory for isolated development
+environments; it does not change local `.tglrc` discovery. Previous JSON
+configuration files are not migrated or read.
 
 ## Debug logging
 

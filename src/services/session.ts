@@ -85,7 +85,7 @@ export class SessionService {
       userId: login.user.id,
       workspaceId: workspace.id,
       workspaceName: workspace.name,
-      lastProjectId: null,
+      projectId: null,
     });
   }
 

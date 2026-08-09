@@ -192,8 +192,11 @@ configure
   .action(async () => configureProjectCommand(context));
 configure
   .command('path')
-  .description('Print the non-secret config path')
-  .action(() => console.log(config.path));
+  .description('Print the global and local config paths')
+  .action(() => {
+    console.log(`Global: ${config.globalPath}`);
+    console.log(`Local: ${config.localPath ?? 'none'}`);
+  });
 
 try {
   await program.parseAsync();

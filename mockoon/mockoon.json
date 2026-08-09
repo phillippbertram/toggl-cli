@@ -121,7 +121,7 @@
           "sendFileAsBody": true,
           "rules": [],
           "rulesOperator": "OR",
-          "disableTemplating": true,
+          "disableTemplating": false,
           "fallbackTo404": true,
           "default": true,
           "crudKey": "id",
