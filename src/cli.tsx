@@ -19,16 +19,34 @@ import {
 import {ConfigStore} from './config.js';
 import {CredentialStore} from './credentials.js';
 import {TglError, errorMessage} from './errors.js';
+import {configureVerbosity, createLogger} from './logger.js';
 import {SessionService} from './services/session.js';
 import {launchTui} from './tui/app.js';
 
 const config = new ConfigStore();
 const credentials = new CredentialStore(config);
-const sessions = new SessionService(config, credentials);
+const logger = createLogger();
+const sessions = new SessionService(config, credentials, logger);
 const context: CommandContext = {config, credentials, sessions};
+
+type GlobalOptions = {verbose: number};
+
+const increaseVerbosity = (_value: string, previous: number): number =>
+  previous + 1;
+
+const commandPath = (command: Command): string => {
+  const names: string[] = [];
+  let current: Command | null = command;
+  while (current) {
+    names.unshift(current.name());
+    current = current.parent;
+  }
+  return names.join(' ');
+};
 
 const program = new Command();
 program.configureHelp({
+  showGlobalOptions: true,
   styleTitle: (title) => pc.bold(pc.cyan(title)),
   styleCommandText: (command) => pc.bold(pc.cyan(command)),
   styleSubcommandText: (command) => pc.cyan(command),
@@ -41,7 +59,19 @@ program
   .name('tgl')
   .description('A friendly Toggl Track CLI and terminal UI')
   .version('0.1.0')
+  .option(
+    '-v, --verbose',
+    'increase log detail (-v, -vv, or -vvv)',
+    increaseVerbosity,
+    0,
+  )
   .showHelpAfterError()
+  .hook('preAction', (_command, actionCommand) => {
+    const {verbose} = program.opts<GlobalOptions>();
+    configureVerbosity(logger, verbose);
+    logger.info('Running command', {command: commandPath(actionCommand)});
+    logger.debug('Verbose logging configured', {verbosity: verbose});
+  })
   .action(async () => {
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
       throw new TglError(

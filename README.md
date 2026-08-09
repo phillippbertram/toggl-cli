@@ -77,6 +77,25 @@ project. It does not modify the original stopped entry.
 If a timer is already running, `start` and `resume` ask before replacing it.
 Pass `--yes` to confirm the switch without a prompt.
 
+## Debug logging
+
+Use the global verbosity option when diagnosing a problem:
+
+```sh
+tgl -v status
+tgl -vv report --previous
+tgl -vvv auth status
+```
+
+| Option | Details                                     |
+| ------ | ------------------------------------------- |
+| `-v`   | Command, session, and HTTP result summaries |
+| `-vv`  | Request URLs and credential resolution      |
+| `-vvv` | Response metadata and report pagination     |
+
+Debug logs are written to stderr. API tokens, authorization headers, and
+request or response bodies are never logged.
+
 ## Dashboard shortcuts
 
 | Key       | Action                            |

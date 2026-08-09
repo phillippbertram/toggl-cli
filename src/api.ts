@@ -1,6 +1,7 @@
 import {z} from 'zod';
 
 import {TogglApiError, errorMessage} from './errors.js';
+import type {Logger} from './logger.js';
 import {
   CurrentTimeEntrySchema,
   ProjectListSchema,
@@ -30,7 +31,10 @@ const EmptyResponseSchema = z.unknown().transform(() => undefined);
 export class TogglApiClient {
   readonly #authorization: string;
 
-  public constructor(token: string) {
+  public constructor(
+    token: string,
+    private readonly logger: Logger,
+  ) {
     this.#authorization = `Basic ${Buffer.from(`${token}:api_token`).toString('base64')}`;
   }
 
@@ -41,6 +45,13 @@ export class TogglApiClient {
     body?: unknown,
   ): Promise<RequestResult<T>> {
     let response: Response;
+    const startedAt = performance.now();
+    const path = url.pathname;
+
+    this.logger.debug('Toggl request', {
+      method,
+      url: url.toString(),
+    });
 
     try {
       response = await fetch(url, {
@@ -54,6 +65,12 @@ export class TogglApiClient {
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
+      this.logger.info('Toggl request failed', {
+        method,
+        path,
+        durationMs: elapsedMilliseconds(startedAt),
+        reason: errorMessage(error),
+      });
       throw new TogglApiError(
         error instanceof DOMException && error.name === 'TimeoutError'
           ? 'Toggl did not respond within 10 seconds.'
@@ -64,6 +81,19 @@ export class TogglApiClient {
     }
 
     const text = await response.text();
+    this.logger.info('Toggl request completed', {
+      method,
+      path,
+      status: response.status,
+      durationMs: elapsedMilliseconds(startedAt),
+    });
+    this.logger.trace('Toggl response metadata', {
+      method,
+      path,
+      bytes: Buffer.byteLength(text),
+      contentType: response.headers.get('content-type'),
+    });
+
     if (!response.ok) {
       const detail = text.trim().slice(0, 300);
       const message =
@@ -224,6 +254,13 @@ export class TogglApiClient {
         timestamp: parseHeaderNumber(result.headers, 'x-next-timestamp'),
       };
       const nextCursor = JSON.stringify(next);
+      this.logger.trace('Detailed report page', {
+        page: page + 1,
+        rows: result.data.length,
+        nextId: next.id,
+        nextRow: next.row,
+        nextTimestamp: next.timestamp,
+      });
       if (
         (next.id === undefined &&
           next.row === undefined &&
@@ -253,3 +290,6 @@ const parseHeaderNumber = (
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
 };
+
+const elapsedMilliseconds = (startedAt: number): number =>
+  Math.round(performance.now() - startedAt);

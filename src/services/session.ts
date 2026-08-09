@@ -3,6 +3,7 @@ import {TogglApiClient as Client} from '../api.js';
 import type {ConfigStore} from '../config.js';
 import type {CredentialSource, CredentialStore} from '../credentials.js';
 import {AuthRequiredError, WorkspaceRequiredError} from '../errors.js';
+import type {Logger} from '../logger.js';
 import type {TogglUser, Workspace} from '../models.js';
 
 export type Session = {
@@ -22,15 +23,20 @@ export class SessionService {
   public constructor(
     private readonly config: ConfigStore,
     private readonly credentials: CredentialStore,
+    private readonly logger: Logger,
   ) {}
 
   public async create(): Promise<Session> {
+    this.logger.debug('Resolving Toggl credentials');
     const credential = await this.credentials.resolve();
     if (!credential) {
       throw new AuthRequiredError();
     }
 
-    const client = new Client(credential.token);
+    this.logger.debug('Toggl credentials resolved', {
+      source: credential.source,
+    });
+    const client = new Client(credential.token, this.logger);
     const user = await client.getMe();
     const configured = this.config.load();
     const workspaceId =
@@ -38,6 +44,11 @@ export class SessionService {
     if (workspaceId === undefined) {
       throw new WorkspaceRequiredError();
     }
+    this.logger.info('Toggl session ready', {
+      credentialSource: credential.source,
+      workspaceId,
+      timezone: user.timezone,
+    });
 
     return {
       client,
@@ -48,7 +59,8 @@ export class SessionService {
   }
 
   public async validateToken(token: string): Promise<ValidatedLogin> {
-    const client = new Client(token);
+    this.logger.info('Validating Toggl API token');
+    const client = new Client(token, this.logger);
     const [user, workspaces] = await Promise.all([
       client.getMe(),
       client.getWorkspaces(),
@@ -61,6 +73,9 @@ export class SessionService {
     login: ValidatedLogin,
     workspace: Workspace,
   ): Promise<void> {
+    this.logger.debug('Saving Toggl login in macOS Keychain', {
+      workspaceId: workspace.id,
+    });
     const account = String(login.user.id);
     await this.credentials.save(account, token);
     this.config.update({
@@ -75,6 +90,7 @@ export class SessionService {
   }
 
   public async logout(): Promise<boolean> {
+    this.logger.debug('Removing stored Toggl login');
     const account = this.config.load().credentialAccount;
     if (account) {
       await this.credentials.delete(account);
