@@ -50,15 +50,17 @@ tgl
 
 ```sh
 tgl start
-tgl start TGGL-42: initial project setup
-tgl start TGGL-42: setup --project "Internal"
-tgl start TGGL-42: setup --no-project
+tgl start "Initial project setup"
+tgl start "APP-42: Initial project setup"
+tgl start "Initial project setup" --project "Internal"
+tgl start "Initial project setup" --no-project
 
 tgl stop
 tgl status
 
 tgl resume
-tgl resume TGGL-42
+tgl resume "Initial project setup"
+tgl resume APP-42
 
 tgl report
 tgl report --previous
@@ -73,6 +75,10 @@ tgl config path
 
 `resume` creates a new running time entry using the previous description and
 project. It does not modify the original stopped entry.
+
+Descriptions are free-form. An optional prefix such as `APP-42:` is recognized
+as a reference for report grouping and resume searches, without requiring a
+specific issue tracker.
 
 If a timer is already running, `start` and `resume` ask before replacing it.
 Pass `--yes` to confirm the switch without a prompt.

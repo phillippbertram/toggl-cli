@@ -145,8 +145,8 @@ export const ReportPanel = ({
             ({formatDecimalHours(state.data.totalSeconds)} h)
           </Text>
         </Text>
-        <Text bold>By Jira issue</Text>
-        {state.data.byIssue.slice(0, compact ? 5 : 8).map((group) => (
+        <Text bold>By reference</Text>
+        {state.data.byReference.slice(0, compact ? 5 : 8).map((group) => (
           <Text key={group.label}>
             {group.label.padEnd(18)} {formatDuration(group.seconds)}
           </Text>

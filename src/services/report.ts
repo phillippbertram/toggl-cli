@@ -5,7 +5,7 @@ import type {TogglApiClient} from '../api.js';
 import type {ReportRow, TimeEntry} from '../models.js';
 
 const MonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
-const ISSUE_PREFIX = /^([A-Z][A-Z0-9]*-\d+):/;
+const REFERENCE_PREFIX = /^([A-Z][A-Z0-9]*-\d+):/;
 
 export type DurationGroup = {
   label: string;
@@ -17,7 +17,7 @@ export type MonthReport = {
   timezone: string;
   totalSeconds: number;
   byDay: DurationGroup[];
-  byIssue: DurationGroup[];
+  byReference: DurationGroup[];
 };
 
 export const monthKey = (
@@ -61,7 +61,7 @@ export const loadMonthReport = async (input: {
   }
 
   const days = new Map<string, number>();
-  const issues = new Map<string, number>();
+  const references = new Map<string, number>();
   let totalSeconds = 0;
 
   for (const interval of entries.values()) {
@@ -73,8 +73,8 @@ export const loadMonthReport = async (input: {
       continue;
     }
 
-    const issue =
-      ISSUE_PREFIX.exec(interval.description)?.[1] ?? 'No Jira issue';
+    const reference =
+      REFERENCE_PREFIX.exec(interval.description)?.[1] ?? 'No reference';
     let cursor = clippedStart;
     while (cursor < clippedEnd) {
       const nextDay = cursor.startOf('day').plus({days: 1});
@@ -85,7 +85,7 @@ export const loadMonthReport = async (input: {
       );
       const day = cursor.toFormat('yyyy-MM-dd');
       days.set(day, (days.get(day) ?? 0) + seconds);
-      issues.set(issue, (issues.get(issue) ?? 0) + seconds);
+      references.set(reference, (references.get(reference) ?? 0) + seconds);
       totalSeconds += seconds;
       cursor = segmentEnd;
     }
@@ -98,7 +98,7 @@ export const loadMonthReport = async (input: {
     byDay: [...days.entries()]
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([label, seconds]) => ({label, seconds})),
-    byIssue: [...issues.entries()]
+    byReference: [...references.entries()]
       .sort(([, left], [, right]) => right - left)
       .map(([label, seconds]) => ({label, seconds})),
   };

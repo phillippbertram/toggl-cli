@@ -95,7 +95,7 @@ export const Dashboard = ({
     screenPaddingRows + headerRows + timerRows + messageRows + footerRows;
   const availableBodyRows = Math.max(4, rows - chromeRows);
   const compactReportContentRows = report.data
-    ? 2 + Math.min(5, report.data.byIssue.length)
+    ? 2 + Math.min(5, report.data.byReference.length)
     : 1;
   const compactReportRows = panelFrameRows + compactReportContentRows;
   const historyVisibleCount = Math.max(
@@ -298,7 +298,7 @@ export const Dashboard = ({
       .filter((value, index, values) => values.indexOf(value) === index);
     return (
       <Form title="New timer" onCancel={() => setView('dashboard')}>
-        <Text dimColor>Example: TGGL-42: initial project setup</Text>
+        <Text dimColor>Example: Prepare initial project setup</Text>
         <TextInput
           placeholder="Description"
           suggestions={suggestions}

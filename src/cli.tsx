@@ -102,7 +102,7 @@ program
 program
   .command('resume')
   .description('Resume the latest or a matching stopped entry')
-  .argument('[query...]', 'description or Jira issue to find')
+  .argument('[query...]', 'description or reference to find')
   .option('--project <project>', 'override project by ID or name')
   .option('--no-project', 'resume without a project')
   .option('-y, --yes', 'replace a running timer without confirmation')

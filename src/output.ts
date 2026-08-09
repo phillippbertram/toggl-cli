@@ -24,8 +24,8 @@ export const printReport = (report: MonthReport): void => {
 
   console.log(`\n${pc.bold('By day')}`);
   printGroups(report.byDay);
-  console.log(`\n${pc.bold('By Jira issue')}`);
-  printGroups(report.byIssue);
+  console.log(`\n${pc.bold('By reference')}`);
+  printGroups(report.byReference);
 };
 
 const printGroups = (groups: Array<{label: string; seconds: number}>): void => {
