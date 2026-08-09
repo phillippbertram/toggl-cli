@@ -10,6 +10,7 @@ import {TglError} from './errors.js';
 import {
   timeEntryDescription,
   timeEntryProjectId,
+  timeEntryProjectLabel,
   type Project,
   type TimeEntry,
   type Workspace,
@@ -25,13 +26,15 @@ import {
   type ValidatedLogin,
 } from './services/session.js';
 import {
-  runningSeconds,
   startTimer,
   stopCurrentTimer,
+  trackedSeconds,
+  type StartTimerResult,
 } from './services/tracking.js';
 
 export type StartOptions = {
   project?: string | false;
+  replace?: boolean;
   yes?: boolean;
 };
 
@@ -116,8 +119,8 @@ export const configureProjectCommand = async (
   const project = projects.find((candidate) => candidate.id === projectId);
   success(
     project
-      ? `Default project set to ${project.name}.`
-      : 'Default project cleared.',
+      ? `Project for new timers set to ${project.name}.`
+      : 'Project for new timers cleared.',
   );
 };
 
@@ -127,21 +130,20 @@ export const startCommand = async (
   options: StartOptions,
 ): Promise<void> => {
   const session = await context.sessions.create();
-  const projects = await activeProjects(session.client, session.workspaceId);
   let description = descriptionParts.join(' ').trim();
   if (!description) {
-    const history = await loadHistory(
-      session.client,
-      session.workspaceId,
-    ).catch(() => []);
     description = await input({
       message: 'Description',
-      default: history[0] ? timeEntryDescription(history[0]) : undefined,
       validate: (value) =>
         value.trim().length > 0 || 'Description is required.',
       theme: {prefix: pc.magenta('tgl')},
     });
   }
+
+  const projects =
+    options.project === false
+      ? []
+      : await activeProjects(session.client, session.workspaceId);
 
   const projectId = await resolveProjectOption(
     projects,
@@ -153,13 +155,12 @@ export const startCommand = async (
     workspaceId: session.workspaceId,
     description,
     projectId,
-    confirmSwitch: (current) => confirmTimerSwitch(current, options.yes),
+    confirmSwitch: (current) =>
+      confirmTimerSwitch(current, options.replace || options.yes),
+    forceReplace: options.replace || options.yes,
   });
   context.config.setLastProject(projectId);
-  const project = projects.find((candidate) => candidate.id === projectId);
-  success(
-    `Started “${timeEntryDescription(result.entry)}”${project ? ` · ${project.name}` : ' · No project'}.`,
-  );
+  printStartResult(result, 'Started', projects);
 };
 
 export const resumeCommand = async (
@@ -188,7 +189,12 @@ export const resumeCommand = async (
     throw new TglError('No stopped entry was selected.', 2);
   }
 
-  const projects = await activeProjects(session.client, session.workspaceId);
+  const sourceProjectId = timeEntryProjectId(source);
+  const projects =
+    options.project === false ||
+    (options.project === undefined && sourceProjectId === null)
+      ? []
+      : await activeProjects(session.client, session.workspaceId);
   const projectId = await resolveResumeProject(
     projects,
     source,
@@ -199,13 +205,12 @@ export const resumeCommand = async (
     workspaceId: session.workspaceId,
     description: timeEntryDescription(source),
     projectId,
-    confirmSwitch: (current) => confirmTimerSwitch(current, options.yes),
+    confirmSwitch: (current) =>
+      confirmTimerSwitch(current, options.replace || options.yes),
+    forceReplace: options.replace || options.yes,
   });
   context.config.setLastProject(projectId);
-  const project = projects.find((candidate) => candidate.id === projectId);
-  success(
-    `Resumed “${timeEntryDescription(result.entry)}”${project ? ` · ${project.name}` : ' · No project'}.`,
-  );
+  printStartResult(result, 'Resumed', projects);
 };
 
 export const stopCommand = async (context: CommandContext): Promise<void> => {
@@ -215,7 +220,7 @@ export const stopCommand = async (context: CommandContext): Promise<void> => {
     info('No timer is running.');
     return;
   }
-  success(`Stopped “${timeEntryDescription(stopped)}”.`);
+  success(`Stopped ${entrySummary(stopped, [], true)}.`);
 };
 
 export const statusCommand = async (context: CommandContext): Promise<void> => {
@@ -227,10 +232,7 @@ export const statusCommand = async (context: CommandContext): Promise<void> => {
   }
 
   console.log(pc.green('● Running'));
-  console.log(timeEntryDescription(current));
-  console.log(
-    `${formatDuration(runningSeconds(current))}${current.project_name ? ` · ${current.project_name}` : current.project_id ? ` · Project #${current.project_id}` : ' · No project'}`,
-  );
+  console.log(entrySummary(current, [], true));
 };
 
 export const reportCommand = async (
@@ -370,10 +372,10 @@ const chooseHistoryEntry = async (matches: TimeEntry[]): Promise<TimeEntry> => {
   const id = await select({
     message: 'Resume entry',
     choices: matches.map((entry) => ({
-      name: timeEntryDescription(entry),
+      name: `${timeEntryDescription(entry)} · ${timeEntryProjectLabel(entry)}`,
       value: entry.id,
       description: entry.stop
-        ? DateTime.fromISO(entry.stop).toLocaleString(DateTime.DATETIME_SHORT)
+        ? `${DateTime.fromISO(entry.stop).toLocaleString(DateTime.DATETIME_MED)} · ${formatDuration(trackedSeconds(entry))}`
         : undefined,
     })),
     pageSize: 12,
@@ -390,12 +392,42 @@ const confirmTimerSwitch = async (
   }
   if (!process.stdin.isTTY) {
     throw new TglError(
-      'A timer is already running. Pass --yes to stop it and start the new entry.',
+      'A timer is already running. Pass --replace to stop it and start the new entry.',
       2,
     );
   }
   return confirm({
     message: `Stop “${timeEntryDescription(current)}” and start the new timer?`,
-    default: true,
+    default: false,
   });
+};
+
+const printStartResult = (
+  result: StartTimerResult,
+  verb: 'Started' | 'Resumed',
+  projects: Project[],
+): void => {
+  if (result.alreadyRunning) {
+    success(`Already tracking ${entrySummary(result.entry, projects, true)}.`);
+    return;
+  }
+
+  if (result.previous) {
+    success(`Stopped ${entrySummary(result.previous, projects, true)}.`);
+  }
+  success(`${verb} ${entrySummary(result.entry, projects)}.`);
+};
+
+const entrySummary = (
+  entry: TimeEntry,
+  projects: Project[],
+  includeDuration = false,
+): string => {
+  const projectId = timeEntryProjectId(entry);
+  const project = projects.find((candidate) => candidate.id === projectId);
+  const projectLabel = project?.name ?? timeEntryProjectLabel(entry);
+  const duration = includeDuration
+    ? ` · ${formatDuration(trackedSeconds(entry))}`
+    : '';
+  return `“${timeEntryDescription(entry)}” · ${projectLabel}${duration}`;
 };

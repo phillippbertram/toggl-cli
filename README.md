@@ -52,8 +52,9 @@ tgl
 tgl start
 tgl start "Initial project setup"
 tgl start "APP-42: Initial project setup"
-tgl start "Initial project setup" --project "Internal"
+tgl start "Initial project setup" -p "Internal"
 tgl start "Initial project setup" --no-project
+tgl start "Initial project setup" --replace
 
 tgl stop
 tgl status
@@ -61,6 +62,7 @@ tgl status
 tgl resume
 tgl resume "Initial project setup"
 tgl resume APP-42
+tgl resume APP-42 --replace
 
 tgl report
 tgl report --previous
@@ -81,18 +83,24 @@ as a reference for report grouping and resume searches, without requiring a
 specific issue tracker.
 
 If a timer is already running, `start` and `resume` ask before replacing it.
-Pass `--yes` to confirm the switch without a prompt.
+The safe default keeps the running timer. Pass `--replace` to confirm the switch
+without a prompt. Starting the same description and project again leaves the
+existing timer running instead of restarting it.
 
 ## Configuration
 
 Non-secret settings are stored in `~/.tgl/config.json`. The API token is kept
 separately in macOS Keychain and is never written to this file.
 
-| Setting         | Command                | Behavior                                   |
-| --------------- | ---------------------- | ------------------------------------------ |
-| Workspace       | `tgl config workspace` | Selects the workspace used by all commands |
-| Default project | `tgl config project`   | Sets the project suggested for new timers  |
-| Config path     | `tgl config path`      | Prints the active configuration file path  |
+| Setting                | Command                | Behavior                                   |
+| ---------------------- | ---------------------- | ------------------------------------------ |
+| Workspace              | `tgl config workspace` | Selects the workspace used by all commands |
+| Project for new timers | `tgl config project`   | Changes the currently remembered project   |
+| Config path            | `tgl config path`      | Prints the active configuration file path  |
+
+The project used by a successful `start` or `resume` becomes the remembered
+project for the next new timer. It can always be overridden with `--project` or
+removed with `--no-project`.
 
 `TOGGL_API_TOKEN` overrides the token stored in Keychain. `TGL_CONFIG_DIR` can
 override the configuration directory for isolated development environments.

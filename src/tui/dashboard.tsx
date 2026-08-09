@@ -5,26 +5,33 @@ import {
   StatusMessage,
   TextInput,
 } from '@inkjs/ui';
+import {DateTime} from 'luxon';
 import {Box, Text, useApp, useInput, useWindowSize} from 'ink';
 import {useCallback, useEffect, useState} from 'react';
 
 import type {CommandContext} from '../commands.js';
-import {errorMessage} from '../errors.js';
+import {UserCancelledError, errorMessage} from '../errors.js';
 import {
   timeEntryDescription,
   timeEntryProjectId,
+  timeEntryProjectLabel,
   type Project,
   type TimeEntry,
 } from '../models.js';
 import {loadHistory, searchHistory} from '../services/history.js';
 import {activeProjects} from '../services/projects.js';
 import {
+  formatDuration,
   loadMonthReport,
   monthKey,
   type MonthReport,
 } from '../services/report.js';
 import type {Session} from '../services/session.js';
-import {startTimer, stopCurrentTimer} from '../services/tracking.js';
+import {
+  startTimer,
+  stopCurrentTimer,
+  trackedSeconds,
+} from '../services/tracking.js';
 import {
   Header,
   HistoryPanel,
@@ -40,6 +47,7 @@ type View =
   | 'dashboard'
   | 'new-description'
   | 'new-project'
+  | 'resume-query'
   | 'resume-select'
   | 'confirm-switch'
   | 'help'
@@ -49,6 +57,7 @@ type PendingStart = {
   description: string;
   projectId: number | null;
   verb: 'Started' | 'Resumed';
+  confirmedTimerId?: number;
 };
 
 type Message = {
@@ -79,6 +88,10 @@ export const Dashboard = ({
   const [monthOffset, setMonthOffset] = useState(0);
   const [selectedHistory, setSelectedHistory] = useState(0);
   const [pending, setPending] = useState<PendingStart>();
+  const [newDescription, setNewDescription] = useState('');
+  const [resumeQuery, setResumeQuery] = useState('');
+  const [resumeMatches, setResumeMatches] = useState<TimeEntry[]>([]);
+  const [resumeError, setResumeError] = useState<string>();
   const [message, setMessage] = useState<Message>();
   const [now, setNow] = useState(Date.now());
 
@@ -181,6 +194,7 @@ export const Dashboard = ({
 
   const finishStart = useCallback(
     async (request: PendingStart) => {
+      let needsConfirmation = false;
       setView('busy');
       setMessage(undefined);
       try {
@@ -189,17 +203,40 @@ export const Dashboard = ({
           workspaceId: session.workspaceId,
           description: request.description,
           projectId: request.projectId,
-          confirmSwitch: () => Promise.resolve(true),
+          confirmSwitch: (running) => {
+            if (request.confirmedTimerId === running.id) {
+              return Promise.resolve(true);
+            }
+
+            needsConfirmation = true;
+            setCurrent({data: running, loading: false});
+            setPending({...request, confirmedTimerId: undefined});
+            setMessage({
+              variant: 'warning',
+              text: 'A timer is already running. Confirm before replacing it.',
+            });
+            setView('confirm-switch');
+            return Promise.resolve(false);
+          },
+          forceReplace: request.confirmedTimerId !== undefined,
         });
         context.config.setLastProject(request.projectId);
         setMessage({
           variant: 'success',
-          text: `${request.verb} “${timeEntryDescription(result.entry)}”.`,
+          text: result.alreadyRunning
+            ? `Already tracking ${entrySummary(result.entry, true)}.`
+            : result.previous
+              ? `Stopped ${entrySummary(result.previous, true)}. ${request.verb} ${entrySummary(result.entry)}.`
+              : `${request.verb} ${entrySummary(result.entry)}.`,
         });
         setPending(undefined);
+        setNewDescription('');
         setView('dashboard');
         await refreshAll();
       } catch (cause) {
+        if (needsConfirmation && cause instanceof UserCancelledError) {
+          return;
+        }
         setMessage({variant: 'error', text: errorMessage(cause)});
         setView('dashboard');
       }
@@ -210,13 +247,39 @@ export const Dashboard = ({
   const queueStart = useCallback(
     (request: PendingStart) => {
       setPending(request);
-      if (current.data) {
+      if (current.data && !matchesPendingStart(current.data, request)) {
         setView('confirm-switch');
       } else {
         void finishStart(request);
       }
     },
     [current.data, finishStart],
+  );
+
+  const prepareNewTimer = useCallback(
+    (value: string, chooseProject: boolean) => {
+      const description = value.trim();
+      if (!description) return;
+
+      const configuredProjectId = context.config.load().lastProjectId ?? null;
+      const projectId =
+        projects.data &&
+        !projects.data.some((project) => project.id === configuredProjectId)
+          ? null
+          : configuredProjectId;
+      const request: PendingStart = {
+        description,
+        projectId,
+        verb: 'Started',
+      };
+      setPending(request);
+      if (chooseProject) {
+        setView('new-project');
+      } else {
+        queueStart(request);
+      }
+    },
+    [context, projects.data, queueStart],
   );
 
   const resumeEntry = useCallback(
@@ -244,6 +307,39 @@ export const Dashboard = ({
     [projects.data, queueStart],
   );
 
+  const searchResumeEntries = useCallback(
+    (value: string) => {
+      const matches = searchHistory(
+        history.data ?? [],
+        value.trim() || undefined,
+      );
+      setResumeQuery(value.trim());
+      setResumeError(undefined);
+      if (matches.length === 0) {
+        setResumeError(
+          value.trim()
+            ? `No recent entry matches “${value.trim()}”.`
+            : 'No stopped entry found in the last 90 days.',
+        );
+        return;
+      }
+      if (matches.length === 1) {
+        resumeEntry(matches[0]!);
+        return;
+      }
+      setResumeMatches(matches.slice(0, 30));
+      setView('resume-select');
+    },
+    [history.data, resumeEntry],
+  );
+
+  const openResumeList = useCallback(() => {
+    setResumeQuery('');
+    setResumeError(undefined);
+    setResumeMatches((history.data ?? []).slice(0, 30));
+    setView('resume-select');
+  }, [history.data]);
+
   const stop = useCallback(async () => {
     setView('busy');
     setMessage(undefined);
@@ -253,7 +349,7 @@ export const Dashboard = ({
         stopped
           ? {
               variant: 'success',
-              text: `Stopped “${timeEntryDescription(stopped)}”.`,
+              text: `Stopped ${entrySummary(stopped, true)}.`,
             }
           : {variant: 'info', text: 'No timer is running.'},
       );
@@ -268,12 +364,18 @@ export const Dashboard = ({
   useInput(
     (inputValue, key) => {
       if (inputValue === 'q') exit();
-      else if (inputValue === 'n') setView('new-description');
-      else if (inputValue === 'e') setView('resume-select');
+      else if (inputValue === 'n') {
+        setNewDescription('');
+        setView('new-description');
+      } else if (inputValue === 'r') {
+        setResumeQuery('');
+        setResumeError(undefined);
+        setView('resume-query');
+      } else if (inputValue === 'e') openResumeList();
       else if (inputValue === 's') void stop();
       else if (inputValue === 'm')
         setMonthOffset((value) => (value === 0 ? -1 : 0));
-      else if (inputValue === 'r') void refreshAll();
+      else if (inputValue === 'R') void refreshAll();
       else if (inputValue === '?') setView('help');
       else if (key.upArrow)
         setSelectedHistory((index) => Math.max(0, index - 1));
@@ -289,6 +391,13 @@ export const Dashboard = ({
     {isActive: view === 'dashboard'},
   );
 
+  useInput(
+    (_inputValue, key) => {
+      if (key.tab) prepareNewTimer(newDescription, true);
+    },
+    {isActive: view === 'new-description'},
+  );
+
   if (view === 'help') {
     return <Help onClose={() => setView('dashboard')} />;
   }
@@ -298,19 +407,18 @@ export const Dashboard = ({
       .filter((value, index, values) => values.indexOf(value) === index);
     return (
       <Form title="New timer" onCancel={() => setView('dashboard')}>
-        <Text dimColor>Example: Prepare initial project setup</Text>
+        <Text>
+          Project:{' '}
+          <Text color="cyan">{newTimerProjectLabel(context, projects)}</Text>
+          <Text dimColor> (last used)</Text>
+        </Text>
+        <Text dimColor>Enter start · Tab choose project</Text>
         <TextInput
           placeholder="Description"
           suggestions={suggestions}
-          onSubmit={(description) => {
-            if (!description.trim()) return;
-            setPending({
-              description: description.trim(),
-              projectId: context.config.load().lastProjectId ?? null,
-              verb: 'Started',
-            });
-            setView('new-project');
-          }}
+          defaultValue={newDescription}
+          onChange={setNewDescription}
+          onSubmit={(description) => prepareNewTimer(description, false)}
         />
       </Form>
     );
@@ -320,13 +428,37 @@ export const Dashboard = ({
       <ProjectPicker
         projects={projects.data ?? []}
         defaultProjectId={pending.projectId}
-        onCancel={() => setView('dashboard')}
+        onCancel={() =>
+          setView(pending.verb === 'Started' ? 'new-description' : 'dashboard')
+        }
         onSelect={(projectId) => queueStart({...pending, projectId})}
       />
     );
   }
+  if (view === 'resume-query') {
+    const suggestions = (history.data ?? [])
+      .map(timeEntryDescription)
+      .filter((value, index, values) => values.indexOf(value) === index);
+    return (
+      <Form title="Resume entry" onCancel={() => setView('dashboard')}>
+        <Text dimColor>
+          Search by description or reference. Leave empty to browse all.
+        </Text>
+        <TextInput
+          placeholder="Description or reference"
+          suggestions={suggestions}
+          defaultValue={resumeQuery}
+          onChange={setResumeQuery}
+          onSubmit={searchResumeEntries}
+        />
+        {resumeError && (
+          <StatusMessage variant="warning">{resumeError}</StatusMessage>
+        )}
+      </Form>
+    );
+  }
   if (view === 'resume-select') {
-    const entries = (history.data ?? []).slice(0, 30);
+    const entries = resumeMatches;
     return (
       <Form title="Resume entry" onCancel={() => setView('dashboard')}>
         {entries.length === 0 ? (
@@ -336,8 +468,9 @@ export const Dashboard = ({
         ) : (
           <Select
             visibleOptionCount={Math.min(12, entries.length)}
+            highlightText={resumeQuery}
             options={entries.map((entry) => ({
-              label: timeEntryDescription(entry),
+              label: resumeEntryLabel(entry),
               value: String(entry.id),
             }))}
             onChange={(value) => {
@@ -352,16 +485,25 @@ export const Dashboard = ({
     );
   }
   if (view === 'confirm-switch' && pending && current.data) {
+    const cancelSwitch = () => {
+      setPending(undefined);
+      setView('dashboard');
+    };
     return (
-      <Form title="Replace running timer" onCancel={() => setView('dashboard')}>
+      <Form title="Replace running timer" onCancel={cancelSwitch}>
         <Text>
           Stop “{timeEntryDescription(current.data)}” and start “
           {pending.description}”?
         </Text>
         <ConfirmInput
-          defaultChoice="confirm"
-          onConfirm={() => void finishStart(pending)}
-          onCancel={() => setView('dashboard')}
+          defaultChoice="cancel"
+          onConfirm={() =>
+            void finishStart({
+              ...pending,
+              confirmedTimerId: current.data!.id,
+            })
+          }
+          onCancel={cancelSwitch}
         />
       </Form>
     );
@@ -410,9 +552,40 @@ export const Dashboard = ({
         />
       </Box>
       <Text dimColor>
-        n new · e resume list · s stop · ↑↓ select · enter resume · m month · r
+        n new · r resume · s stop · ↑↓ select · enter resume · m month · R
         refresh · ? help · q quit
       </Text>
     </Screen>
   );
+};
+
+const matchesPendingStart = (
+  current: TimeEntry,
+  pending: PendingStart,
+): boolean =>
+  timeEntryDescription(current) === pending.description &&
+  timeEntryProjectId(current) === pending.projectId;
+
+const entrySummary = (entry: TimeEntry, includeDuration = false): string =>
+  `“${timeEntryDescription(entry)}” · ${timeEntryProjectLabel(entry)}${
+    includeDuration ? ` · ${formatDuration(trackedSeconds(entry))}` : ''
+  }`;
+
+const newTimerProjectLabel = (
+  context: CommandContext,
+  projects: Loadable<Project[]>,
+): string => {
+  const projectId = context.config.load().lastProjectId ?? null;
+  if (projectId === null) return 'No project';
+  return (
+    projects.data?.find((project) => project.id === projectId)?.name ??
+    `Project #${projectId}`
+  );
+};
+
+const resumeEntryLabel = (entry: TimeEntry): string => {
+  const completed = entry.stop
+    ? DateTime.fromISO(entry.stop).toLocaleString(DateTime.DATE_MED)
+    : 'Recently';
+  return `${timeEntryDescription(entry)} · ${timeEntryProjectLabel(entry)} · ${completed} · ${formatDuration(trackedSeconds(entry))}`;
 };

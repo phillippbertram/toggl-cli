@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import {Command} from 'commander';
+import {Command, Option} from 'commander';
 import {config as loadEnvironment} from 'dotenv';
 import pc from 'picocolors';
 
@@ -85,33 +85,66 @@ program
     await launchTui(context);
   });
 
-program
+const start = program
   .command('start')
   .description('Start a new timer')
   .argument('[description...]', 'time entry description')
-  .option('--project <project>', 'project ID or name')
+  .option('-p, --project <project>', 'project ID or name')
   .option('--no-project', 'start without a project')
-  .option('-y, --yes', 'replace a running timer without confirmation')
+  .option('--replace', 'stop an active timer without confirmation')
+  .addOption(new Option('-y, --yes').hideHelp())
   .action(
     async (
       description: string[],
-      options: {project?: string | false; yes?: boolean},
+      options: {
+        project?: string | false;
+        replace?: boolean;
+        yes?: boolean;
+      },
     ) => startCommand(context, description, options),
   );
+start.addHelpText(
+  'after',
+  `
+Examples:
+  tgl start "Initial project setup"
+  tgl start "APP-42: Initial project setup" -p Internal
+  tgl start "Focused work" --no-project
 
-program
+Without a description, tgl prompts for one. Without a project option, the last
+successfully used project is reused. If the same timer is already running, the
+command succeeds without restarting it.`,
+);
+
+const resume = program
   .command('resume')
   .description('Resume the latest or a matching stopped entry')
   .argument('[query...]', 'description or reference to find')
-  .option('--project <project>', 'override project by ID or name')
+  .option('-p, --project <project>', 'override project by ID or name')
   .option('--no-project', 'resume without a project')
-  .option('-y, --yes', 'replace a running timer without confirmation')
+  .option('--replace', 'stop an active timer without confirmation')
+  .addOption(new Option('-y, --yes').hideHelp())
   .action(
     async (
       query: string[],
-      options: {project?: string | false; yes?: boolean},
+      options: {
+        project?: string | false;
+        replace?: boolean;
+        yes?: boolean;
+      },
     ) => resumeCommand(context, query, options),
   );
+resume.addHelpText(
+  'after',
+  `
+Examples:
+  tgl resume
+  tgl resume APP-42
+  tgl resume "Initial project setup" -p Internal
+
+Without a query, tgl resumes the most recently stopped entry from the last 90
+days. Its description and project are preserved unless explicitly overridden.`,
+);
 
 program
   .command('stop')
@@ -155,7 +188,7 @@ configure
   .action(async () => configureWorkspaceCommand(context));
 configure
   .command('project')
-  .description('Choose the default project')
+  .description('Choose the project for new timers')
   .action(async () => configureProjectCommand(context));
 configure
   .command('path')

@@ -123,5 +123,11 @@ export const timeEntryWorkspaceId = (entry: TimeEntry): number | undefined =>
 export const timeEntryProjectId = (entry: TimeEntry): number | null =>
   entry.project_id ?? entry.pid ?? null;
 
+export const timeEntryProjectLabel = (entry: TimeEntry): string =>
+  entry.project_name?.trim() ||
+  (timeEntryProjectId(entry) === null
+    ? 'No project'
+    : `Project #${timeEntryProjectId(entry)}`);
+
 export const timeEntryDescription = (entry: TimeEntry): string =>
   entry.description?.trim() || 'Untitled';

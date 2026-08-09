@@ -20,12 +20,13 @@ export const Help = ({onClose}: {onClose: () => void}) => {
           tgl shortcuts
         </Text>
         <Text>n Start a new timer</Text>
-        <Text>e Open the resume list</Text>
+        <Text>r Search and resume an entry</Text>
+        <Text>e Browse recent entries</Text>
         <Text>s Stop the running timer</Text>
         <Text>↑ / ↓ Select a recent entry</Text>
         <Text>Enter Resume the selected entry</Text>
         <Text>m Toggle current / previous month</Text>
-        <Text>r Refresh data</Text>
+        <Text>R Refresh data</Text>
         <Text>q Quit</Text>
         <Text dimColor>Press ?, q, or Esc to return.</Text>
       </Box>
