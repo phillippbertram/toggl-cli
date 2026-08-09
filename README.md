@@ -1,0 +1,104 @@
+# tgl
+
+`tgl` is a macOS-first command-line client for everyday Toggl Track work. It
+combines fast commands with a fullscreen terminal dashboard built with Ink.
+
+## Requirements
+
+- Node.js 22 or newer (Node.js 24 LTS is recommended)
+- pnpm 11
+- A Toggl Track API token from <https://track.toggl.com/profile>
+
+## Install locally
+
+```sh
+pnpm install
+pnpm build
+pnpm global:install
+```
+
+The package exposes the global `tgl` executable. The pnpm global binary
+directory must be part of `PATH`. Re-run `pnpm build` after source changes; the
+global installation remains linked to this directory.
+
+To remove the global command again after trying it out:
+
+```sh
+pnpm global:remove
+```
+
+## First run
+
+Run the interactive login and paste the API token when prompted:
+
+```sh
+tgl auth login
+```
+
+The token is validated with Toggl before it is stored in macOS Keychain. It is
+never written to the regular config file. As an alternative, set
+`TOGGL_API_TOKEN`; the environment variable always takes precedence over the
+Keychain entry.
+
+Start the fullscreen dashboard with:
+
+```sh
+tgl
+```
+
+## Commands
+
+```sh
+tgl start
+tgl start TGGL-42: initial project setup
+tgl start TGGL-42: setup --project "Internal"
+tgl start TGGL-42: setup --no-project
+
+tgl stop
+tgl status
+
+tgl resume
+tgl resume TGGL-42
+
+tgl report
+tgl report --previous
+tgl report --month 2026-07
+
+tgl auth status
+tgl auth logout
+tgl config workspace
+tgl config project
+tgl config path
+```
+
+`resume` creates a new running time entry using the previous description and
+project. It does not modify the original stopped entry.
+
+If a timer is already running, `start` and `resume` ask before replacing it.
+Pass `--yes` to confirm the switch without a prompt.
+
+## Dashboard shortcuts
+
+| Key       | Action                            |
+| --------- | --------------------------------- |
+| `n`       | Start a new timer                 |
+| `e`       | Open the resume list              |
+| `s`       | Stop the running timer            |
+| `↑` / `↓` | Select a recent entry             |
+| `Enter`   | Resume the selected entry         |
+| `m`       | Toggle current and previous month |
+| `r`       | Refresh data                      |
+| `?`       | Show help                         |
+| `q`       | Quit                              |
+
+## Development
+
+```sh
+pnpm run typecheck
+pnpm run lint
+pnpm run format:check
+pnpm run build
+```
+
+`pnpm run check` runs all validation steps. The MVP intentionally has no
+automated unit-test suite.
